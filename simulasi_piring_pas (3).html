@@ -1,0 +1,2414 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Piring Pas: Makan Habis, Energi Penuh!</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        heading: ['Fredoka', 'sans-serif'],
+                        body: ['Nunito', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            yellow: '#FFD166',
+                            green: '#06D6A0',
+                            blue: '#118AB2',
+                            red: '#EF476F',
+                            dark: '#073B4C',
+                            purple: '#7209B7',
+                            orange: '#F77F00'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #F4F7FE;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-heading { font-family: 'Fredoka', sans-serif; }
+        
+        .plate-container {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-height: 280px;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .plate-small {
+            width: 100%;
+            max-width: 310px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #FFF3BF 0%, #FFD166 80%, #E6A100 100%);
+            border: 10px solid #FFE066;
+            box-shadow: 0 10px 25px -5px rgba(247, 127, 0, 0.4), inset 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .plate-medium {
+            width: 100%;
+            max-width: 390px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #E6FFFA 0%, #06D6A0 85%, #04A77D 100%);
+            border: 12px solid #A3E635;
+            box-shadow: 0 15px 30px -5px rgba(6, 214, 160, 0.4), inset 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .plate-large {
+            width: 100%;
+            max-width: 470px;
+            border-radius: 40px;
+            background: radial-gradient(circle, #F3E8FF 0%, #7209B7 85%, #4C0578 100%);
+            border: 14px solid #F43F5E;
+            box-shadow: 0 20px 40px -5px rgba(114, 9, 183, 0.5), inset 0 8px 16px rgba(0,0,0,0.25);
+        }
+
+        .act-pop { animation: actPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes actPop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .act-bounce { animation: actBounce 1.2s ease-in-out infinite; display: inline-block; }
+        @keyframes actBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .act-bar { width: 48px; height: 34px; border-radius: 10px; border: 3px solid #cbd5e1; background: #f1f5f9; transition: all 0.3s; }
+        .act-bar.on { border-color: transparent; box-shadow: 0 3px 8px rgba(0,0,0,0.2); animation: popIn 0.4s both; }
+
+        .food-item-anim {
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0) rotate(-15deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printable-report, #printable-report * { visibility: visible; }
+            #printable-report { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-12">
+
+    <header class="bg-gradient-to-r from-brand-blue via-teal-500 to-brand-green text-white p-4 md:p-5 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl md:text-5xl animate-bounce">🍽️</span>
+                    <div>
+                        <h1 class="font-heading text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2">
+                            Simulasi Piring Pas: Makan Habis, Energi Penuh!
+                        </h1>
+                        <p class="text-xs md:text-sm font-medium text-teal-100">Simulasi IPAS SD - Porsi Pas, Nutrisi Seimbang & Aksi Hemat Energi</p>
+                        <p class="text-[11px] font-bold text-amber-200 mt-0.5">✨ Dibuat oleh Ibu Nurul Fajriah</p>
+                    </div>
+                </div>
+
+                <!-- Mute & Help Buttons for Mobile -->
+                <div class="flex md:hidden items-center gap-2">
+                    <button onclick="toggleAudio()" id="btn-audio-mobile" class="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-lg" title="Matikan/Hidupkan Suara">🔊</button>
+                    <button onclick="openHelpModal()" class="p-2 bg-amber-400 text-slate-900 font-bold rounded-xl text-sm font-heading">❓ Panduan</button>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs & Utility Buttons -->
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center">
+                <nav class="flex bg-white/20 p-1.5 rounded-2xl backdrop-blur-md gap-1 md:gap-2">
+                    <button onclick="switchTab('aktivitas')" id="nav-aktivitas" class="px-3.5 py-2 md:px-5 md:py-2.5 rounded-xl font-heading text-xs md:text-sm font-bold bg-white text-brand-dark shadow transition-all flex items-center gap-1.5">
+                        <span>🎯</span> Pilih Aktivitas
+                    </button>
+                    <button onclick="switchTab('kiosk')" id="nav-kiosk" class="px-3.5 py-2 md:px-5 md:py-2.5 rounded-xl font-heading text-xs md:text-sm font-bold bg-white text-brand-dark shadow transition-all flex items-center gap-1.5">
+                        <span>🍽️</span> Piring & Menu
+                    </button>
+                    <button onclick="switchTab('evaluator')" id="nav-evaluator" class="px-3.5 py-2 md:px-5 md:py-2.5 rounded-xl font-heading text-xs md:text-sm font-bold text-white hover:bg-white/10 transition-all flex items-center gap-1.5">
+                        <span>⚖️</span> Matriks & Voting Kelas
+                    </button>
+                    <button onclick="switchTab('scoreboard')" id="nav-scoreboard" class="px-3.5 py-2 md:px-5 md:py-2.5 rounded-xl font-heading text-xs md:text-sm font-bold text-white hover:bg-white/10 transition-all flex items-center gap-1.5">
+                        <span>🪙</span> Skor & Penguatan
+                    </button>
+                </nav>
+
+                <div class="hidden md:flex items-center gap-2">
+                    <button onclick="openLoginModal()" id="btn-login-status" class="px-3.5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-900 font-heading font-bold rounded-2xl text-xs md:text-sm shadow transition-all flex items-center gap-1.5">
+                        🔑 Login Kelompok
+                    </button>
+                    <button onclick="toggleAudio()" id="btn-audio-desktop" class="p-2.5 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-bold transition-all text-base" title="Matikan/Hidupkan Suara">🔊</button>
+                    <button onclick="openHelpModal()" class="px-3.5 py-2.5 bg-white/20 hover:bg-white/30 text-white font-heading font-bold rounded-2xl text-xs md:text-sm shadow transition-all flex items-center gap-1">
+                        📖 Panduan
+                    </button>
+                    <button onclick="openSettingsModal()" class="px-3 py-2.5 bg-white/20 hover:bg-white/30 text-white font-heading font-bold rounded-2xl text-xs md:text-sm transition-all flex items-center gap-1" title="Pengaturan Kelompok">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6">
+
+        <!-- Penunjuk langkah (stepper) -->
+        <div id="stepper" class="bg-white rounded-3xl px-3 py-3 md:px-5 md:py-4 mb-6 shadow-md border-2 border-slate-200"></div>
+        
+        <!-- Active Group Banner & Session Controls -->
+        <div class="bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 text-white rounded-3xl p-4 md:p-5 mb-6 shadow-xl border-2 border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 text-center sm:text-left">
+                <div class="w-12 h-12 bg-amber-400 text-slate-900 rounded-2xl flex items-center justify-center text-2xl font-bold font-heading shadow">
+                    🎤
+                </div>
+                <div>
+                    <span class="text-[11px] font-bold text-indigo-200 uppercase tracking-wider block">Sesi Presentasi Aktif</span>
+                    <h2 id="banner-active-group" class="font-heading text-xl md:text-2xl font-bold text-amber-300">
+                        Kelompok 1 (Aktif)
+                    </h2>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="openLoginModal()" class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-heading font-bold rounded-xl text-xs transition-all flex items-center gap-1.5">
+                    🔐 Ganti Sesi Kelompok
+                </button>
+                <button onclick="completeSessionAndNextGroup()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-heading font-bold rounded-xl text-xs md:text-sm shadow-lg transition-all active:scale-95 flex items-center gap-1.5">
+                    ✅ Selesai Sesi & Lanjut Kelompok Berikutnya! 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 1: KIOSK & PLATE BUILDER -->
+        <!-- HALAMAN 1: PILIH TINGKAT AKTIVITAS -->
+        <section id="tab-aktivitas" class="space-y-6">
+            <div class="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 text-white rounded-3xl p-5 md:p-6 shadow-lg text-center">
+                <span class="bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">Halaman 1 dari 3</span>
+                <h1 class="font-heading text-2xl md:text-3xl font-bold mt-2">🎯 Pilih Tingkat Aktivitas Kelompokmu</h1>
+                <p class="text-sm text-sky-100 mt-1">Sebelum memilih makanan, putuskan dulu: kelompokmu akan melakukan apa setelah makan?</p>
+            </div>
+
+            <div class="bg-sky-50 rounded-3xl p-5 md:p-6 border-2 border-sky-200 space-y-3">
+                <h2 class="font-heading text-lg font-bold text-sky-900 flex items-center gap-2"><span>💡</span> Kenapa harus memilih aktivitas dulu?</h2>
+                <ul class="space-y-2 text-sm text-sky-900 leading-relaxed">
+                    <li>🚗 <b>Tubuh seperti mesin.</b> Makanan adalah bahan bakarnya. Makin banyak bergerak, makin banyak bahan bakar yang dipakai.</li>
+                    <li>⚖️ <b>Aktivitas berbeda, porsi berbeda.</b> Anak yang duduk membaca tidak butuh porsi sebanyak anak yang akan lomba lari.</li>
+                    <li>😵 <b>Ingat Siti dan Doni.</b> Doni makan sedikit lalu berlari, jadi tubuhnya kekurangan bahan bakar dan lemas.</li>
+                    <li>🌱 <b>Porsi yang pas</b> membuat tubuh bertenaga dan tidak ada makanan yang tersisa.</li>
+                </ul>
+                <p class="text-xs font-bold text-sky-800 bg-white rounded-2xl p-3 border border-sky-200">Tips memilih: tanyakan pada kelompokmu, "Setelah makan, kita akan duduk, berjalan santai, atau berlari?" Pilih yang paling sesuai.</p>
+            </div>
+
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200">
+                <h2 class="font-heading text-lg md:text-xl text-brand-dark font-bold mb-3 flex items-center gap-2">
+                    <span class="bg-amber-100 text-amber-600 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    Apa yang akan kelompokmu lakukan setelah makan?
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                    <button onclick="pickActivity('ringan')" id="hunger-ringan" class="hunger-btn p-4 rounded-2xl border-4 border-slate-200 hover:border-amber-400 bg-amber-50/50 flex items-center gap-4 text-left transition-all active:scale-95">
+                        <span class="text-4xl">🍎</span>
+                        <div>
+                            <div class="font-heading font-bold text-base md:text-lg text-amber-900">1. Aktivitas Ringan (Bermain Tenang)</div>
+                            <div class="text-xs text-amber-700">Duduk, mewarnai, membaca. <b>Target: Porsi Ringan.</b></div>
+                        </div>
+                    </button>
+                    <button onclick="pickActivity('sedang')" id="hunger-sedang" class="hunger-btn p-4 rounded-2xl border-4 border-emerald-400 bg-emerald-50 flex items-center gap-4 text-left transition-all ring-2 ring-emerald-400 active:scale-95">
+                        <span class="text-4xl">🍱</span>
+                        <div>
+                            <div class="font-heading font-bold text-base md:text-lg text-emerald-900">2. Aktivitas Sedang (Belajar di Sekolah)</div>
+                            <div class="text-xs text-emerald-700">Belajar dan bergerak seperti biasa. <b>Target: Porsi Sedang.</b></div>
+                        </div>
+                    </button>
+                    <button onclick="pickActivity('berat')" id="hunger-berat" class="hunger-btn p-4 rounded-2xl border-4 border-slate-200 hover:border-purple-400 bg-purple-50/50 flex items-center gap-4 text-left transition-all active:scale-95">
+                        <span class="text-4xl">⚽</span>
+                        <div>
+                            <div class="font-heading font-bold text-base md:text-lg text-purple-900">3. Aktivitas Berat (Lomba Lari / Olahraga)</div>
+                            <div class="text-xs text-purple-700">Berlari dan berolahraga. <b>Target: Porsi Berat / Jumbo.</b></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div id="activity-pick-note" class="bg-white rounded-3xl p-4 border-2 border-emerald-300 text-sm font-bold text-emerald-900"></div>
+
+            <div class="text-center">
+                <button onclick="goToKiosk()" class="px-8 py-3 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold text-base md:text-lg rounded-2xl shadow-lg transition-all active:scale-95">
+                    Lanjut: Pilih Piring 🍽️
+                </button>
+                <p class="text-xs text-slate-500 mt-2">Langkah berikutnya: memilih piring. Setelah itu baru memilih menu.</p>
+            </div>
+        </section>
+
+        <section id="tab-kiosk" class="hidden space-y-6">
+            
+            <!-- 2-Minute Selection Timer Card -->
+            <div id="kiosk-timer-card" class="hidden bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-3xl p-4 md:p-5 shadow-lg border-2 border-amber-300 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 text-center md:text-left">
+                    <span class="text-4xl md:text-5xl animate-pulse">⏳</span>
+                    <div>
+                        <span class="bg-white/20 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-amber-100">Batas Waktu Diskusi Kelompok</span>
+                        <h3 class="font-heading text-lg md:text-xl font-bold">Waktu Memilih Menu (2 Menit)</h3>
+                        <p class="text-xs text-amber-100">Sepakati menu makanan bersama kelompokmu sebelum waktu habis!</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 bg-black/20 p-3 rounded-2xl border border-white/20">
+                    <div id="kiosk-timer-display" class="font-heading text-3xl md:text-4xl font-bold tracking-wider text-yellow-300 min-w-[110px] text-center">
+                        02:00
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <button onclick="startKioskTimer()" id="btn-kiosk-timer-start" class="px-3 py-1 bg-white hover:bg-amber-100 text-slate-800 font-bold rounded-lg text-xs transition-all active:scale-95 flex items-center gap-1">
+                            ▶️ Mulai
+                        </button>
+                        <button onclick="pauseKioskTimer()" class="px-3 py-1 bg-white/20 hover:bg-white/30 text-white font-bold rounded-lg text-xs transition-all active:scale-95 flex items-center gap-1">
+                            ⏸️ Pause
+                        </button>
+                        <button onclick="resetKioskTimer()" class="px-3 py-1 bg-white/20 hover:bg-white/30 text-white font-bold rounded-lg text-xs transition-all active:scale-95 flex items-center gap-1">
+                            🔄 Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Up Banner Notice -->
+            <div id="kiosk-timeup-banner" class="hidden bg-rose-600 text-white p-4 rounded-2xl font-heading font-bold text-center text-sm md:text-base shadow-md animate-bounce flex items-center justify-center gap-2">
+                <span>🔔</span> WAKTU 2 MENIT MEMILIH MENU TELAH HABIS! Ayo langsung cek piring kelompokmu di Matriks Rumus Pas! 🚀
+            </div>
+
+            <!-- Ringkasan aktivitas (pilihan dibuat di halaman pertama) -->
+            <div class="bg-white rounded-3xl px-5 py-3 shadow-md border-2 border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <div class="text-sm font-bold text-slate-700">🎯 Aktivitas kelompokmu: <span id="kiosk-activity-chip" class="text-brand-blue font-heading"></span></div>
+                <div class="flex gap-2">
+                    <button id="btn-change-plate" onclick="setKioskStep('plate')" class="hidden px-3 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-800 text-xs font-bold rounded-xl">🍽️ Ganti Piring</button>
+                    <button onclick="switchTab('aktivitas')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">✏️ Ubah Aktivitas</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Choose Plate Style -->
+            <div id="kiosk-plate-card" class="bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200">
+                <h2 class="font-heading text-lg md:text-xl text-brand-dark font-bold mb-1 flex items-center gap-2">
+                    <span class="bg-teal-100 text-teal-600 px-3 h-8 rounded-full flex items-center justify-center text-sm font-bold">Langkah 2</span>
+                    Pilih Ukuran Piringmu:
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                    <button onclick="selectPlateStyle('small')" id="plate-style-small" class="plate-style-btn p-3 rounded-2xl border-4 border-slate-200 bg-amber-50 hover:border-amber-400 transition-all text-center flex flex-col items-center active:scale-95">
+                        <div class="w-14 h-14 rounded-full bg-amber-300 border-4 border-amber-500 shadow flex items-center justify-center text-2xl mb-1">🍌</div>
+                        <span class="font-heading font-bold text-amber-900 text-base">Piring Kecil</span>
+                    </button>
+
+                    <button onclick="selectPlateStyle('medium')" id="plate-style-medium" class="plate-style-btn p-3 rounded-2xl border-4 border-emerald-500 bg-emerald-50 transition-all text-center flex flex-col items-center ring-2 ring-emerald-400 active:scale-95">
+                        <div class="w-16 h-16 rounded-full bg-emerald-300 border-4 border-emerald-600 shadow flex items-center justify-center text-3xl mb-1">🍛</div>
+                        <span class="font-heading font-bold text-emerald-900 text-base">Piring Sedang</span>
+                    </button>
+
+                    <button onclick="selectPlateStyle('large')" id="plate-style-large" class="plate-style-btn p-3 rounded-2xl border-4 border-slate-200 bg-purple-50 hover:border-purple-400 transition-all text-center flex flex-col items-center active:scale-95">
+                        <div class="w-16 h-16 rounded-2xl bg-purple-300 border-4 border-purple-600 shadow flex items-center justify-center text-3xl mb-1">🍗</div>
+                        <span class="font-heading font-bold text-purple-900 text-base">Piring Besar</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="kiosk-plate-next" class="text-center">
+                <p class="text-sm text-slate-600 mb-3">Piring kecil untuk makan sedikit, piring besar untuk makan banyak. Sudah memilih? Ayo pilih menunya!</p>
+                <button onclick="startMenuStep()" class="px-8 py-3 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold text-base md:text-lg rounded-2xl shadow-lg transition-all active:scale-95">Lanjut: Pilih Menu 🍱</button>
+                <p class="text-xs text-slate-500 mt-2">Timer 2 menit mulai saat kamu menekan tombol ini.</p>
+            </div>
+
+            <div id="kiosk-menu-banner" class="hidden bg-teal-50 border-2 border-teal-200 rounded-3xl px-5 py-3 font-heading font-bold text-teal-900 text-base md:text-lg text-center">🍱 Langkah 3: Klik makanan untuk memasukkannya ke piring. Klik makanan di piring untuk menghapus.</div>
+
+            <!-- Workspace: Food Selection & Unlimited Plate -->
+            <div id="kiosk-workspace" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- Food Item Picker with Nutrient Filters -->
+                <div class="lg:col-span-7 bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200 space-y-4">
+                    
+                    <!-- Nutrient Category Filter Bar -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-100 p-2 rounded-2xl">
+                        <span class="text-xs font-bold text-slate-600 pl-2">🥦 Filter Nutrisi: <span class="inline-block bg-orange-500 text-white px-1.5 rounded-full ml-1">🌴 Khas</span> = menu khas Sulawesi Tengah</span>
+                        <div class="flex flex-wrap gap-1">
+                            <button onclick="filterMenu('all')" id="filter-all" class="px-2.5 py-1 bg-brand-dark text-white text-xs font-bold rounded-xl shadow transition-all">Semua</button>
+                            <button onclick="filterMenu('karbo')" id="filter-karbo" class="px-2.5 py-1 bg-white hover:bg-amber-100 text-slate-700 text-xs font-bold rounded-xl transition-all">🍚 Karbohidrat</button>
+                            <button onclick="filterMenu('protein')" id="filter-protein" class="px-2.5 py-1 bg-white hover:bg-rose-100 text-slate-700 text-xs font-bold rounded-xl transition-all">🍗 Protein</button>
+                            <button onclick="filterMenu('sayur')" id="filter-sayur" class="px-2.5 py-1 bg-white hover:bg-emerald-100 text-slate-700 text-xs font-bold rounded-xl transition-all">🥦 Sayuran</button>
+                            <button onclick="filterMenu('buah')" id="filter-buah" class="px-2.5 py-1 bg-white hover:bg-rose-100 text-slate-700 text-xs font-bold rounded-xl transition-all">🍎 Buah</button>
+                            <button onclick="filterMenu('minuman')" id="filter-minuman" class="px-2.5 py-1 bg-white hover:bg-sky-100 text-slate-700 text-xs font-bold rounded-xl transition-all">🥤 Minuman</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-heading text-base md:text-lg font-bold text-amber-800 flex items-center gap-2">
+                                <span>🍱</span> Karbohidrat, Protein, dan Sayuran:
+                            </h3>
+                            <span class="text-xs bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold" id="snack-count-badge">24 Pilihan</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1" id="snack-menu-list">
+                            <!-- JS Generated Items -->
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-heading text-base md:text-lg font-bold text-teal-800 flex items-center gap-2">
+                                <span>🍎</span> Buah-buahan dan Minuman:
+                            </h3>
+                            <span class="text-xs bg-teal-100 text-teal-800 px-2.5 py-0.5 rounded-full font-bold" id="main-count-badge">20 Pilihan</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1" id="main-menu-list">
+                            <!-- JS Generated Items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Unlimited Plate -->
+                <div class="lg:col-span-5 bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200 flex flex-col items-center justify-between min-h-[500px]">
+                    
+                    <div class="w-full text-center">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Piring Sajian Kelompok</span>
+                        <h3 id="current-plate-title" class="font-heading text-xl font-bold text-brand-dark">Piring Sedang</h3>
+                        <p class="text-xs text-emerald-600 font-bold mt-0.5">✨ Bebas Ambil Makanan (Tekan item di piring untuk menghapus)</p>
+                    </div>
+
+                    <!-- Dynamic Visual Plate -->
+                    <div class="relative flex items-center justify-center my-4 w-full">
+                        <div id="visual-plate" class="plate-container plate-medium flex flex-wrap items-center justify-center p-6 gap-2.5 content-center relative">
+                            <!-- Selected food items render here -->
+                        </div>
+                    </div>
+
+                    <!-- Plate Item Summary & Action -->
+                    <div class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-[11px] text-slate-500 font-bold block uppercase">TOTAL ISI PIRING:</span>
+                                <span id="plate-count" class="font-heading text-xl font-bold text-brand-dark">0 Item</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[11px] text-slate-500 font-bold block uppercase">UKURAN PORSI:</span>
+                                <span id="calc-portion-tag" class="font-heading text-xs md:text-sm font-bold bg-slate-200 text-slate-700 px-3 py-1 rounded-full">Kosong</span>
+                            </div>
+                        </div>
+
+                        <div id="kiosk-guide" class="text-xs font-bold text-slate-700 space-y-1 pt-2 border-t border-slate-200"></div>
+
+                        <div class="flex gap-2 pt-2 border-t border-slate-200">
+                            <button onclick="clearPlate()" class="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs transition-all flex items-center gap-1">
+                                🗑️ Kosongkan
+                            </button>
+                            <button onclick="switchTab('evaluator')" class="flex-1 py-2.5 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold rounded-xl text-xs md:text-sm shadow transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                                🚀 Langkah 4: Cek Matriks!
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: MATRIKS RUMUS PAS EVALUATOR -->
+        <section id="tab-evaluator" class="hidden space-y-6">
+            
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="active-presenter-badge" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full font-heading text-xs font-bold uppercase">
+                                Kelompok 1 Sedang Maju 🎤
+                            </span>
+                        </div>
+                        <h2 class="font-heading text-xl md:text-2xl text-brand-dark font-bold mt-1">⚖️ Voting Tebakan Kelas & Matriks Rumus Pas</h2>
+                        <p class="text-slate-600 text-xs md:text-sm">Kelompok penonton menebak porsi terlebih dahulu, lalu buka matriks untuk verifikasi skor!</p>
+                    </div>
+                    <button onclick="switchTab('kiosk')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1">
+                        ✏️ Ubah Makanan / Piring
+                    </button>
+                </div>
+
+                <!-- Spectator Group Voting Section (Before Matrix Reveal) -->
+                <div class="mt-6 p-5 bg-gradient-to-r from-indigo-900 to-purple-900 text-white rounded-3xl border-2 border-indigo-700 shadow-lg">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                        <div>
+                            <span class="bg-amber-400 text-slate-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide">Tahap 1: Tebakan Penonton</span>
+                            <h3 class="font-heading text-lg md:text-xl font-bold text-white mt-0.5">🗳️ Voting Kelompok Penonton</h3>
+                            <p class="text-xs text-indigo-200">Pilih tebakan apakah porsi makanan kelompok penyaji PAS, BERLEBIHAN, atau KURANG.</p>
+                        </div>
+                        <div id="voting-status-tag" class="text-xs font-bold bg-white/20 px-3 py-1 rounded-xl text-amber-300">
+                            Menunggu Tebakan Penonton...
+                        </div>
+                    </div>
+
+                    <!-- Spectator Group Vote Buttons Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="spectator-voting-cards">
+                        <!-- JS Generated Spectator Cards -->
+                    </div>
+
+                    <!-- Action Button to Lock Votes & Reveal Matrix -->
+                    <div class="mt-5 pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div class="text-xs text-indigo-200 italic">
+                            💡 **Rules:** Tebakan BENAR = +1 Koin Energi | Tebakan SALAH = -1 Koin Energi
+                        </div>
+                        <button onclick="openVotePopup()" class="w-full sm:w-auto px-5 py-3 bg-white/15 hover:bg-white/25 text-white font-heading font-bold text-sm rounded-2xl border border-white/30 transition-all active:scale-95">🗳️ Tebak Lewat Pop-up</button>
+                        <button onclick="revealMatrixAndCalculateScores()" id="btn-reveal-matrix" class="w-full sm:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-900 font-heading font-bold text-sm md:text-base rounded-2xl shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                            🔒 Buka Matriks & Hitung Koin Voting! 🚀
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voting Results Breakdown Summary Card (Visible after Reveal) -->
+                <div id="voting-results-summary" class="hidden mt-6 p-5 bg-amber-50 border-2 border-amber-300 rounded-3xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-heading text-base font-bold text-amber-900 flex items-center gap-2">
+                            <span>📊</span> Perolehan Koin Energi Voting Penonton:
+                        </h4>
+                        <button onclick="resetVotingForGroup()" class="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-bold rounded-lg transition-all">
+                            🔄 Vote Ulang Kelompok Ini
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="voting-results-grid">
+                        <!-- JS Generated Result Badges -->
+                    </div>
+                </div>
+
+                <!-- Match Status Banner (Revealed after calculation) -->
+                <div id="eval-status-card" class="mt-6 p-6 rounded-3xl border-4 flex flex-col md:flex-row items-center gap-6 bg-slate-50 border-slate-300">
+                    <span id="eval-icon" class="text-6xl">🔒</span>
+                    <div class="space-y-1.5 text-center md:text-left">
+                        <span id="eval-badge" class="px-3 py-1 bg-slate-200 text-slate-700 rounded-full font-heading text-xs font-bold uppercase tracking-wider">LOCKED</span>
+                        <h3 id="eval-title" class="font-heading text-2xl font-bold text-slate-800">Matriks Belum Dibuka!</h3>
+                        <p id="eval-desc" class="text-slate-600 text-sm md:text-base leading-relaxed">Silakan lakukan voting kelompok penonton terlebih dahulu, lalu klik tombol "Buka Matriks & Kalkulasi Skor Voting"!</p>
+                    </div>
+                </div>
+
+                <!-- Matrix Breakdown Details -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase">1. Tingkat Aktivitas Penyaji:</span>
+                        <div id="summary-hunger" class="font-heading text-base font-bold text-brand-dark mt-1">2. Aktivitas Sedang (Belajar di Sekolah)</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase">2. Total Item Diambil:</span>
+                        <div id="summary-items-count" class="font-heading text-base font-bold text-brand-dark mt-1">0 Item</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase">3. Ukuran Porsi Makanan:</span>
+                        <div id="summary-calc-portion" class="font-heading text-base font-bold text-brand-dark mt-1">Porsi Sedang</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase">4. Hasil Pemeriksaan Matriks:</span>
+                        <div id="summary-result-tag" class="font-heading text-base font-bold text-slate-500 mt-1">🔒 RAHASIA</div>
+                    </div>
+                </div>
+
+                <!-- Detailed Food Items List -->
+                <div class="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <span class="text-xs text-slate-500 font-bold uppercase block mb-2">Daftar Makanan di Piring Kelompok Penyaji:</span>
+                    <div id="summary-food-list" class="flex flex-wrap gap-2">
+                        <!-- Rendered Items -->
+                    </div>
+                </div>
+
+                <!-- Panel Komposisi Isi Piringku -->
+                <div class="mt-6 bg-emerald-50 rounded-3xl p-5 md:p-6 border-2 border-emerald-200">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">🍽️</span>
+                        <div>
+                            <h3 class="font-heading text-base md:text-lg font-bold text-emerald-900">Komposisi Isi Piringku</h3>
+                            <p class="text-xs text-emerald-700">Target: separuh sayur dan buah, separuh makanan pokok dan lauk. Minuman dilihat terpisah.</p>
+                        </div>
+                    </div>
+                    <div id="komposisi-body"></div>
+                </div>
+
+
+                <!-- Spokesperson Script Assistant -->
+                <div class="mt-6 bg-amber-50 rounded-3xl p-5 md:p-6 border-2 border-amber-200 relative">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">📢</span>
+                        <div>
+                            <h3 class="font-heading text-base md:text-lg font-bold text-amber-900">Teks Panduan Juru Bicara Kelompok:</h3>
+                            <p class="text-xs text-amber-700">Gunakan kalimat ini saat maju dan menjelaskan alasan pilihan kelompokmu di depan kelas!</p>
+                        </div>
+                    </div>
+                    <div id="spokesperson-script" class="bg-white p-4 rounded-2xl border border-amber-200 font-medium text-slate-800 text-sm md:text-base leading-relaxed italic">
+                        "Halo teman-teman! Kami dari kelompok presenter..."
+                    </div>
+                    <div class="flex items-center gap-3 mt-3">
+                        <button onclick="copyScript()" class="px-4 py-2 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold text-xs rounded-xl transition-all flex items-center gap-1 active:scale-95">
+                            📋 Salin Teks Presentasi
+                        </button>
+                        <span id="copy-toast" class="text-xs font-bold text-emerald-600 hidden">✓ Berhasil disalin!</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- HALAMAN HASIL: 3 halaman berurutan setelah voting -->
+        <section id="tab-hasil" class="hidden space-y-6">
+            <div class="bg-white rounded-3xl px-4 py-3 shadow-md border-2 border-slate-200">
+                <div id="hasil-progress" class="flex items-center justify-center gap-2 flex-wrap font-heading font-bold text-xs md:text-sm"></div>
+            </div>
+
+            <!-- Halaman 1: hasil voting -->
+            <div id="hasil-page-1" class="hasil-page space-y-4">
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-3xl p-5 text-center shadow-lg">
+                    <span class="bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">Halaman 1 dari 4</span>
+                    <h2 class="font-heading text-2xl md:text-3xl font-bold mt-2">🗳️ Hasil Voting Kelompok Penonton</h2>
+                    <p class="text-sm text-indigo-100 mt-1">Siapa yang tebakannya benar?</p>
+                </div>
+                <div id="hv-answer" class="rounded-3xl p-5 border-4 text-center"></div>
+                <div id="hv-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+            </div>
+
+            <!-- Halaman 2: penjelasan porsi -->
+            <div id="hasil-page-2" class="hasil-page hidden space-y-4">
+                <div class="bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-3xl p-5 text-center shadow-lg">
+                    <span class="bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">Halaman 2 dari 4</span>
+                    <h2 class="font-heading text-2xl md:text-3xl font-bold mt-2">🍽️ Porsi yang Diambil</h2>
+                    <p id="hp-sub" class="text-sm text-teal-100 mt-1"></p>
+                </div>
+                <div id="hp-body" class="space-y-4"></div>
+            </div>
+
+            <!-- Halaman 3: perubahan energi -->
+            <div id="hasil-page-3" class="hasil-page hidden space-y-4">
+                <div class="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-3xl p-5 text-center shadow-lg">
+                    <span class="bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">Halaman 3 dari 4</span>
+                    <h2 class="font-heading text-2xl md:text-3xl font-bold mt-2">⚡ Perubahan Energi</h2>
+                    <p class="text-sm text-sky-100 mt-1">Ke mana energi dari makanan pergi?</p>
+                </div>
+                <!-- Panel Perubahan Energi (CP: perubahan bentuk energi) -->
+                <div class="bg-sky-50 rounded-3xl p-5 md:p-6 border-2 border-sky-200">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">⚡</span>
+                        <div>
+                            <h3 class="font-heading text-base md:text-lg font-bold text-sky-900">Dari Makanan Menjadi Tenaga</h3>
+                            <p class="text-xs text-sky-700">Tubuh mengubah makanan menjadi energi gerak dan energi panas.</p>
+                        </div>
+                    </div>
+                    <div id="energy-panel-body"></div>
+                </div>
+            </div>
+
+            <!-- Halaman 4: komitmen Zero Food Waste -->
+            <div id="hasil-page-4" class="hasil-page hidden space-y-4">
+                <div class="bg-gradient-to-r from-emerald-600 to-green-500 text-white rounded-3xl p-5 text-center shadow-lg">
+                    <span class="bg-white/20 px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">Halaman 4 dari 4</span>
+                    <h2 class="font-heading text-2xl md:text-3xl font-bold mt-2">📣 Komitmen Zero Food Waste</h2>
+                    <p class="text-sm text-emerald-100 mt-1">Janji kita agar tidak ada makanan yang terbuang!</p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-5 md:p-6 border-4 border-emerald-300 shadow-md space-y-4">
+                    <div class="text-center">
+                        <div class="text-6xl">🤝</div>
+                        <div class="font-heading text-xl md:text-2xl font-bold text-emerald-900 mt-1">Teks Komitmen Kelompok</div>
+                        <p class="text-sm font-bold text-slate-500">Bacakan bersama dengan suara jelas dan percaya diri.</p>
+                    </div>
+                    <div id="kom-text" class="bg-emerald-50 rounded-2xl p-4 md:p-5 border-2 border-emerald-200 space-y-2 text-lg md:text-xl font-bold text-emerald-900 leading-snug"></div>
+
+                    <div>
+                        <div class="font-heading font-bold text-base text-slate-700 mb-2">➕ Pilih satu janji tambahan untuk kelompokmu:</div>
+                        <div id="kom-choices" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div>
+                    </div>
+
+                    <div>
+                        <label for="kom-own" class="font-heading font-bold text-base text-slate-700 block mb-1">✍️ Janji pribadiku (tulis dengan kalimatmu sendiri):</label>
+                        <input id="kom-own" type="text" maxlength="90" oninput="renderKomitmen()" placeholder="Contoh: Aku akan mengambil nasi secukupnya dan menghabiskannya." class="w-full px-4 py-3 rounded-2xl border-2 border-slate-300 focus:border-emerald-500 outline-none text-base font-semibold">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <button onclick="speakKomitmen()" class="flex-1 py-3 bg-sky-500 hover:bg-sky-600 text-white font-heading font-bold text-base rounded-2xl shadow active:scale-95 transition-all">🔊 Dengarkan</button>
+                        <button onclick="openTeleprompter()" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-heading font-bold text-base rounded-2xl shadow active:scale-95 transition-all">🎤 Mode Juru Bicara</button>
+                        <button onclick="signKomitmen()" id="kom-sign" class="flex-1 py-3 bg-amber-400 hover:bg-amber-300 text-slate-900 font-heading font-bold text-base rounded-2xl shadow active:scale-95 transition-all">✍️ Kami Berjanji!</button>
+                    </div>
+                    <div id="kom-signed" class="hidden text-center rounded-2xl bg-emerald-100 border-2 border-emerald-300 p-3 font-heading font-bold text-emerald-900"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+                <button id="hasil-back" onclick="hasilBack()" class="px-5 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-heading font-bold text-sm md:text-base rounded-2xl active:scale-95 transition-all">⬅️ Kembali</button>
+                <button id="hasil-next" onclick="hasilNext()" class="flex-1 md:flex-none px-8 py-3 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold text-base md:text-lg rounded-2xl shadow-lg active:scale-95 transition-all"></button>
+            </div>
+        </section>
+
+        <!-- TAB 3: SCOREBOARD -->
+        <section id="tab-scoreboard" class="hidden space-y-6">
+            
+            <!-- Scoreboard Card & Print Button -->
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="font-heading text-xl md:text-2xl text-brand-dark font-bold flex items-center gap-2">
+                            <span>🪙</span> Papan Skor Koin Energi Kelompok
+                        </h2>
+                        <p class="text-xs text-slate-500 font-medium">Klik kartu kelompok untuk memilih kelompok yang sedang maju presentasi</p>
+                    </div>
+                    <button onclick="triggerPrintReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all active:scale-95">
+                        <span>🖨️</span> Cetak Rekap Kelas
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4" id="group-scoreboard-list">
+                    <!-- JS generated groups -->
+                </div>
+            </div>
+
+            <!-- IPAS Post-Game Reflection Cards Section -->
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-md border-2 border-slate-200 space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">💡</span>
+                    <div>
+                        <h3 class="font-heading text-lg font-bold text-brand-dark">Pertanyaan Refleksi Pembelajaran IPAS SD</h3>
+                        <p class="text-xs text-slate-500">Gunakan pertanyaan ini untuk menutup simulasi pembelajaran di kelas:</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
+                        <span class="text-xs font-bold bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">Pertanyaan 1</span>
+                        <p class="font-heading font-bold text-sm text-amber-900">Mengapa tubuh kita butuh porsi makanan yang pas, tidak kurang dan tidak lebih?</p>
+                        <p class="text-xs text-amber-700">Agar tubuh memiliki cukup energi utama tanpa menyebabkan kantuk atau penumpukan sampah sisa makanan.</p>
+                    </div>
+                    <div class="p-4 bg-purple-50 border border-purple-200 rounded-2xl space-y-2">
+                        <span class="text-xs font-bold bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full">Pertanyaan 2</span>
+                        <p class="font-heading font-bold text-sm text-purple-900">Aksi hemat energi apa yang bisa kamu terapkan di rumah mulai hari ini?</p>
+                        <p class="text-xs text-purple-700">Mengambil nasi secukupnya, mematikan TV saat tidak ditonton, dan menutup rapat keran air.</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Hidden Printable Report Section -->
+    <div id="printable-report" class="hidden p-8 bg-white text-slate-900">
+        <div class="text-center border-b-2 border-slate-800 pb-4 mb-6">
+            <h1 class="text-2xl font-bold font-heading">REKAPITULASI PEMBELAJARAN IPAS SD</h1>
+            <h2 class="text-lg font-bold">Simulasi Piring Pas: Makan Habis, Energi Penuh!</h2>
+            <p class="text-xs text-slate-600 mt-1">Laporan Penilaian Pembelajaran Porsi Pas & Hemat Energi Kelas</p>
+        </div>
+
+        <table class="w-full border-collapse border border-slate-400 text-xs mb-6">
+            <thead>
+                <tr class="bg-slate-100">
+                    <th class="border border-slate-400 p-2">No</th>
+                    <th class="border border-slate-400 p-2 text-left">Nama Kelompok</th>
+                    <th class="border border-slate-400 p-2 text-center">Perolehan Koin Energi</th>
+                    <th class="border border-slate-400 p-2 text-center">Status Porsi Makanan</th>
+                </tr>
+            </thead>
+            <tbody id="printable-report-body">
+                <!-- JS Populated -->
+            </tbody>
+        </table>
+
+        <div class="mt-8 pt-4 border-t border-slate-300 flex justify-between items-end text-xs">
+            <div>
+                <p><strong>Catatan Guru:</strong> Pembelajaran berjalan sangat baik. Siswa mampu memahami kaitan porsi makanan dengan aksi hemat energi.</p>
+            </div>
+            <div class="text-center min-w-[150px]">
+                <p>Guru Kelas IPAS</p>
+                <div class="h-12"></div>
+                <p>____________________</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-up Penjelasan Aktivitas -->
+    <div id="modal-activity" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div id="act-card" class="bg-white rounded-[2rem] max-w-md w-full p-5 md:p-6 text-center space-y-3 border-8 border-amber-300 shadow-2xl max-h-[95vh] overflow-y-auto act-pop">
+            <div id="act-emoji" class="text-8xl act-bounce"></div>
+            <h3 id="act-title" class="font-heading text-2xl md:text-3xl font-bold text-brand-dark leading-tight"></h3>
+
+            <!-- Kegiatan: gambar + kalimat pendek -->
+            <div class="bg-slate-50 rounded-2xl p-3 flex items-center gap-3 text-left border-2 border-slate-200">
+                <span id="act-do-icon" class="text-5xl"></span>
+                <p id="act-line1" class="text-lg font-bold text-slate-800 leading-snug"></p>
+            </div>
+
+            <!-- Meter tenaga (baterai) -->
+            <div class="bg-slate-50 rounded-2xl p-3 border-2 border-slate-200">
+                <div class="font-heading font-bold text-slate-700 text-base mb-1">⚡ Tenaga yang dipakai tubuhmu</div>
+                <div id="act-energy" class="flex justify-center gap-2"></div>
+                <div id="act-energy-label" class="font-heading font-bold text-base mt-1"></div>
+            </div>
+
+            <!-- Gambar porsi makanan -->
+            <div class="bg-slate-50 rounded-2xl p-3 border-2 border-slate-200">
+                <div class="font-heading font-bold text-slate-700 text-base mb-1">🍽️ Makananmu</div>
+                <div id="act-food" class="text-5xl tracking-wide leading-tight"></div>
+                <p id="act-line2" class="text-lg font-bold text-slate-800 leading-snug mt-1"></p>
+            </div>
+
+            <div id="act-target" class="inline-block px-5 py-2.5 rounded-2xl font-heading font-bold text-lg"></div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="speakActivity()" id="act-speak" class="px-4 py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-heading font-bold text-base rounded-2xl shadow active:scale-95 transition-all flex items-center gap-1.5">🔊 Dengarkan</button>
+                <button onclick="closeActivityPopup()" class="flex-1 py-3.5 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold text-xl rounded-2xl shadow active:scale-95 transition-all">Oke, Aku Paham! 👍</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-up Langkah 2-4 (bahasa sederhana untuk kelas III) -->
+    <div id="modal-step" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div id="stp-card" class="bg-white rounded-[2rem] max-w-md w-full p-5 md:p-6 text-center space-y-3 border-8 border-teal-300 shadow-2xl max-h-[95vh] overflow-y-auto act-pop">
+            <span id="stp-badge" class="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-heading font-bold text-xs uppercase tracking-wider"></span>
+            <div id="stp-emoji" class="text-8xl act-bounce"></div>
+            <h3 id="stp-title" class="font-heading text-2xl md:text-3xl font-bold text-brand-dark leading-tight"></h3>
+            <div id="stp-rows" class="space-y-2 text-left"></div>
+            <div id="stp-tip" class="rounded-2xl px-4 py-3 font-heading font-bold text-base"></div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="speakStep()" class="px-4 py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-heading font-bold text-base rounded-2xl shadow active:scale-95 transition-all flex items-center gap-1.5">🔊 Dengarkan</button>
+                <button id="stp-btn" onclick="closeStepPopup()" class="flex-1 py-3.5 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold text-xl rounded-2xl shadow active:scale-95 transition-all"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode Juru Bicara (teleprompter komitmen) -->
+    <div id="modal-prompter" class="fixed inset-0 bg-slate-900 z-[60] hidden flex flex-col p-4 md:p-8">
+        <div class="flex items-center justify-between text-white mb-3">
+            <div class="font-heading font-bold text-lg md:text-2xl">🎤 Juru Bicara: bacakan dengan suara jelas!</div>
+            <button onclick="closeTeleprompter()" class="px-4 py-2 bg-white/15 hover:bg-white/25 rounded-xl font-heading font-bold">✖ Tutup</button>
+        </div>
+        <div id="prompter-body" class="flex-1 overflow-y-auto bg-slate-800 rounded-3xl p-5 md:p-10 text-white font-heading font-bold leading-snug space-y-4 text-2xl md:text-4xl"></div>
+        <div class="flex gap-2 mt-3">
+            <button onclick="speakKomitmen()" class="px-5 py-3 bg-sky-500 hover:bg-sky-400 text-white font-heading font-bold text-lg rounded-2xl">🔊 Dengarkan</button>
+            <button onclick="closeTeleprompter()" class="flex-1 py-3 bg-brand-green hover:bg-emerald-600 text-white font-heading font-bold text-lg rounded-2xl">Selesai Membacakan 👏</button>
+        </div>
+    </div>
+
+    <!-- Pop-up Tebakan Kelompok Penonton -->
+    <div id="modal-vote" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] max-w-lg w-full p-5 md:p-6 text-center space-y-3 border-8 border-indigo-300 shadow-2xl max-h-[95vh] overflow-y-auto act-pop">
+            <span class="inline-block px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-heading font-bold text-xs uppercase tracking-wider">Tebakan Kelompok Penonton</span>
+            <div class="text-7xl act-bounce">🗳️</div>
+            <h3 id="vote-title" class="font-heading text-2xl md:text-3xl font-bold text-brand-dark leading-tight"></h3>
+            <div class="bg-slate-50 rounded-2xl p-3 border-2 border-slate-200 text-left">
+                <div id="vote-activity" class="font-heading font-bold text-sm text-slate-700 mb-1"></div>
+                <div id="vote-food" class="flex flex-wrap gap-1 text-3xl"></div>
+            </div>
+            <p class="font-heading font-bold text-base text-indigo-900">Menurutmu, porsi makanan ini PAS, LEBIH, atau KURANG?</p>
+            <div id="vote-rows" class="space-y-2"></div>
+            <div id="vote-msg" class="text-sm font-bold text-rose-600 min-h-[1.25rem]"></div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="speakVote()" class="px-4 py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-heading font-bold text-base rounded-2xl shadow active:scale-95 transition-all">🔊</button>
+                <button onclick="closeVotePopup()" class="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-heading font-bold text-base rounded-2xl active:scale-95 transition-all">Nanti</button>
+                <button onclick="submitVotesFromPopup()" class="flex-1 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-900 font-heading font-bold text-lg rounded-2xl shadow active:scale-95 transition-all">🔒 Kunci & Lihat Hasil!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help / How to Play Modal -->
+    <div id="modal-help" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-heading text-xl font-bold text-brand-dark flex items-center gap-2">
+                    <span>📖</span> Cara Bermain & Panduan Guru
+                </h3>
+                <button onclick="closeHelpModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs md:text-sm text-slate-700 leading-relaxed">
+                <div class="p-3 bg-sky-50 rounded-2xl border border-sky-200">
+                    <strong class="font-heading text-sky-900 block text-sm mb-1">🎯 Tahap 1: Pilih Aktivitas</strong>
+                    <p>Kelompok memilih tingkat aktivitas (ringan, sedang, atau berat) berdasarkan kegiatan setelah makan. Pilihan ini menentukan target porsi. Setelah itu lanjut memilih piring, lalu memilih menu. Setelah voting, ada 4 halaman hasil: Hasil Voting, Porsi Kelompok, Perubahan Energi, dan Komitmen Zero Food Waste (ada Mode Juru Bicara untuk dibacakan di depan kelas). Setiap langkah 1 sampai 4 diawali pop-up penjelasan yang bisa dibacakan.</p>
+                </div>
+                <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200">
+                    <strong class="font-heading text-amber-900 block text-sm mb-1">🍽️ Tahap 2 dan 3: Pilih Piring, lalu Pilih Menu (2 Menit)</strong>
+                    <p>Tahap 2: kelompok memilih ukuran piring (menu belum tampil). Tahap 3: setelah menekan "Lanjut: Pilih Menu", timer 2 menit mulai dan menu muncul, sesuai aktivitas yang sudah dipilih. Menu terdiri dari karbohidrat, protein, sayuran, buah, dan minuman. Menu yang bertanda 🌴 Khas adalah makanan khas Sulawesi Tengah (minta tiap kelompok memilih minimal 2 menu khas dan menjelaskan alasannya). Susun Isi Piringku: separuh piring sayur dan buah, separuh lainnya makanan pokok dan lauk. Jangan lupa air putih!</p>
+                </div>
+                <div class="p-3 bg-indigo-50 rounded-2xl border border-indigo-200">
+                    <strong class="font-heading text-indigo-900 block text-sm mb-1">⚖️ Tahap 4: Voting & Matriks</strong>
+                    <p>Kelompok penonton menebak porsi penyaji (PAS, BERLEBIHAN, atau KURANG). Klik "Buka Matriks" untuk melihat jawaban dan menambah/mengurangi Koin Energi penonton!</p>
+                </div>
+                <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
+                    <strong class="font-heading text-emerald-900 block text-sm mb-1">🍽️ Isi Piringku (Gizi Seimbang)</strong>
+                    <p>Separuh piring berisi sayur dan buah, separuh lainnya makanan pokok (karbohidrat) dan lauk pauk (protein). Panel Komposisi menunjukkan persentase tiap kelompok. Minuman dinilai terpisah (air putih paling sehat). Komposisi seimbang adalah penguatan gizi dan tidak mengubah koin voting.</p>
+                </div>
+                <div class="p-3 bg-sky-50 rounded-2xl border border-sky-200">
+                    <strong class="font-heading text-sky-900 block text-sm mb-1">⚡ Dari Makanan Menjadi Tenaga</strong>
+                    <p>Setelah matriks dibuka, tunjukkan panel energi: tubuh mengubah makanan menjadi energi gerak dan energi panas. Minta murid mengerjakan Mini-cek, lalu hubungkan dengan LKM Langkah 3 nomor 2.</p>
+                </div>
+            </div>
+
+            <button onclick="closeHelpModal()" class="w-full py-2.5 bg-brand-blue text-white font-heading font-bold rounded-xl text-sm shadow">
+                Paham & Siap Bermain! 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Group Settings Modal -->
+    <div id="modal-settings" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-heading text-lg font-bold text-brand-dark flex items-center gap-2">
+                    ⚙️ Pengaturan Kelompok
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+            </div>
+            <div class="space-y-3">
+                <label class="text-xs font-bold text-slate-700 block">Jumlah Kelompok:</label>
+                <select onchange="changeGroupCount(this.value)" class="w-full p-2 bg-slate-100 border border-slate-300 rounded-xl font-bold text-xs text-slate-800">
+                    <option value="3">3 Kelompok</option>
+                    <option value="4">4 Kelompok</option>
+                    <option value="5" selected>5 Kelompok</option>
+                    <option value="6">6 Kelompok</option>
+                </select>
+                <div id="custom-group-names-inputs" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <!-- JS Populated Inputs -->
+                </div>
+            </div>
+            <div class="pt-2 flex justify-end gap-2">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">Batal</button>
+                <button onclick="saveGroupSettings()" class="px-4 py-2 bg-brand-green text-white font-bold rounded-xl text-xs shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Start Modal -->
+    <div id="modal-group-start" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 border-4 border-amber-400 shadow-2xl">
+            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-3xl mx-auto font-bold shadow-inner">
+                🚀
+            </div>
+            <div>
+                <span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Giliran Kelompok Baru</span>
+                <h2 id="modal-group-title" class="font-heading text-2xl font-bold text-brand-dark mt-2">
+                    Kelompok 1
+                </h2>
+                <p id="modal-group-subtitle" class="text-xs text-slate-500 mt-1">
+                    Saatnya memilih menu di Kios Makanan dan membuktikan porsi pas!
+                </p>
+            </div>
+            <div class="pt-2">
+                <button onclick="confirmStartGroup()" class="w-full py-3 bg-amber-400 hover:bg-amber-300 text-slate-900 font-heading font-bold text-sm rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                    ▶️ Mulai Pilih Menu! 🍽️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Session Login Modal -->
+    <div id="modal-login" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 border-4 border-indigo-500 shadow-2xl">
+            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto font-bold shadow-inner">
+                🔐
+            </div>
+            <div>
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Login Sesi Kelompok</span>
+                <h2 class="font-heading text-2xl font-bold text-brand-dark mt-2">
+                    Pilih Kelompok Yang Akan Maju
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">Siswa/Kelompok dapat memilih identitas kelompok untuk memulai giliran.</p>
+            </div>
+
+            <div class="space-y-3 text-left">
+                <label class="text-xs font-bold text-slate-700 block">Pilih Kelompok:</label>
+                <select id="login-group-select" class="w-full p-3 bg-slate-100 border-2 border-slate-300 rounded-2xl font-heading font-bold text-sm text-slate-800 focus:border-indigo-500 focus:outline-none">
+                    <!-- JS Populated -->
+                </select>
+
+                <label class="text-xs font-bold text-slate-700 block mt-2">Kode PIN Sesi (Opsional / Default: 1234):</label>
+                <input type="password" id="login-pin-input" placeholder="Masukkan PIN (Opsional)" value="1234" class="w-full p-3 bg-slate-100 border-2 border-slate-300 rounded-2xl font-bold text-sm text-center text-slate-800 focus:border-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="pt-2 flex items-center gap-2">
+                <button onclick="closeLoginModal()" class="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-heading font-bold text-sm rounded-2xl transition-all">
+                    Batal
+                </button>
+                <button onclick="submitGroupLogin()" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-heading font-bold text-sm rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                    🔓 Masuk Sesi Kelompok
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script update section -->
+    <script>
+        // Global Application State Object Definition
+        const state = {
+            groups: ['Kelompok 1', 'Kelompok 2', 'Kelompok 3', 'Kelompok 4', 'Kelompok 5'],
+            scores: [0, 0, 0, 0, 0],
+            selectedGroupIndex: 0,
+            hungerLevel: 'sedang',
+            plateStyle: 'medium',
+            plateItems: [],
+            activeFilter: 'all',
+            spectatorVotes: {},
+            isMatrixRevealed: false,
+            isAudioMuted: false,
+            kioskTimer: null,
+            kioskTimeLeft: 120,
+            isKioskTimerRunning: false,
+            groupPins: { 0: '1234', 1: '1234', 2: '1234', 3: '1234', 4: '1234' },
+            isLoggedIn: false
+        };
+
+        const tagLabel = { karbo: 'Karbohidrat', protein: 'Protein', sayur: 'Sayuran', buah: 'Buah', minuman: 'Minuman' };
+
+        // Daftar menu bagian atas: karbohidrat, protein, sayuran
+        const snackMenu = [
+            { id: 'k1', name: 'Nasi', emoji: '🍚', weight: 1.5, tag: 'karbo' },
+            { id: 'k2', name: 'Nasi Jagung', emoji: '🌽', weight: 1.5, tag: 'karbo', khas: true },
+            { id: 'k3', name: 'Pisang Rebus', emoji: '🍌', weight: 1.0, tag: 'karbo' },
+            { id: 'k4', name: 'Ubi Rebus', emoji: '🍠', weight: 1.0, tag: 'karbo' },
+            { id: 'k5', name: 'Nasi Goreng', emoji: '🍛', weight: 1.8, tag: 'karbo' },
+            { id: 'k6', name: 'Nasi Kuning', emoji: '🍛', weight: 1.7, tag: 'karbo' },
+            { id: 'k7', name: 'Bubur Ayam', emoji: '🥣', weight: 1.5, tag: 'karbo' },
+            { id: 'k8', name: 'Jagung Rebus', emoji: '🌽', weight: 1.0, tag: 'karbo' },
+            { id: 'k9', name: 'Lontong', emoji: '🍙', weight: 1.3, tag: 'karbo' },
+            { id: 'k10', name: 'Ketupat', emoji: '🍙', weight: 1.3, tag: 'karbo' },
+            { id: 'k11', name: 'Burasa', emoji: '🍙', weight: 1.4, tag: 'karbo', khas: true },
+            { id: 'k12', name: 'Tabaro Dange', emoji: '🍘', weight: 1.0, tag: 'karbo', khas: true },
+            { id: 'k13', name: 'Putu Ketan', emoji: '🍡', weight: 1.0, tag: 'karbo', khas: true },
+            { id: 'p1', name: 'Ayam Goreng', emoji: '🍗', weight: 1.8, tag: 'protein' },
+            { id: 'p2', name: 'Telur Rebus', emoji: '🥚', weight: 0.9, tag: 'protein' },
+            { id: 'p3', name: 'Telur Goreng', emoji: '🍳', weight: 1.3, tag: 'protein' },
+            { id: 'p4', name: 'Nugget', emoji: '🧆', weight: 1.5, tag: 'protein' },
+            { id: 'p5', name: 'Tahu Goreng', emoji: '🟨', weight: 1.2, tag: 'protein' },
+            { id: 'p6', name: 'Tempe Goreng', emoji: '🟫', weight: 1.2, tag: 'protein' },
+            { id: 'p7', name: 'Ikan Goreng', emoji: '🐟', weight: 1.7, tag: 'protein' },
+            { id: 'p8', name: 'Sosis', emoji: '🌭', weight: 1.2, tag: 'protein' },
+            { id: 'p9', name: 'Kaledo', emoji: '🍲', weight: 1.8, tag: 'protein', khas: true },
+            { id: 'p10', name: 'Uta Dada', emoji: '🍗', weight: 1.6, tag: 'protein', khas: true },
+            { id: 'p11', name: 'Palumara', emoji: '🐟', weight: 1.5, tag: 'protein', khas: true },
+            { id: 'p12', name: 'Ikan Duo', emoji: '🐟', weight: 1.5, tag: 'protein', khas: true },
+            { id: 'p13', name: 'Cakalang Vuvu', emoji: '🐟', weight: 1.5, tag: 'protein', khas: true },
+            { id: 'p14', name: 'Uve Mpoi', emoji: '🍲', weight: 1.3, tag: 'protein', khas: true },
+            { id: 'p15', name: 'Rono Tapa', emoji: '🍲', weight: 1.3, tag: 'protein', khas: true },
+            { id: 'v1', name: 'Uta Kelor', emoji: '🥬', weight: 1.0, tag: 'sayur', khas: true },
+            { id: 'v2', name: 'Sayur Bavoa', emoji: '🥗', weight: 1.0, tag: 'sayur', khas: true },
+            { id: 'v3', name: 'Sayur Kangkung', emoji: '🌿', weight: 1.0, tag: 'sayur' },
+            { id: 'v4', name: 'Sayur Sup', emoji: '🥘', weight: 1.2, tag: 'sayur' },
+            { id: 'v5', name: 'Sayur Capcay', emoji: '🥗', weight: 1.2, tag: 'sayur' },
+            { id: 'v6', name: 'Sayur Kacang Panjang', emoji: '🌱', weight: 0.8, tag: 'sayur' },
+            { id: 'v7', name: 'Sayur Bayam', emoji: '🥬', weight: 1.0, tag: 'sayur' },
+            { id: 'v8', name: 'Sayur Sawi', emoji: '🥬', weight: 1.0, tag: 'sayur' },
+            { id: 'v9', name: 'Sayur Pakis', emoji: '🌿', weight: 1.0, tag: 'sayur' },
+            { id: 'v10', name: 'Sayur Nangka', emoji: '🥘', weight: 1.2, tag: 'sayur' },
+            { id: 'v11', name: 'Sayur Labu Siam', emoji: '🥒', weight: 0.9, tag: 'sayur' }
+        ];
+
+        // Daftar menu bagian bawah: buah-buahan dan minuman (minuman tidak dihitung pada berat porsi)
+        const mainMenu = [
+            { id: 'b1', name: 'Pisang', emoji: '🍌', weight: 0.8, tag: 'buah' },
+            { id: 'b2', name: 'Semangka', emoji: '🍉', weight: 0.8, tag: 'buah' },
+            { id: 'b3', name: 'Jeruk', emoji: '🍊', weight: 0.7, tag: 'buah' },
+            { id: 'b4', name: 'Apel', emoji: '🍎', weight: 0.7, tag: 'buah' },
+            { id: 'b5', name: 'Mangga', emoji: '🥭', weight: 0.8, tag: 'buah' },
+            { id: 'b6', name: 'Pepaya', emoji: '🍑', weight: 0.8, tag: 'buah' },
+            { id: 'b7', name: 'Melon', emoji: '🍈', weight: 0.8, tag: 'buah' },
+            { id: 'b8', name: 'Anggur', emoji: '🍇', weight: 0.6, tag: 'buah' },
+            { id: 'b9', name: 'Salak', emoji: '🌰', weight: 0.7, tag: 'buah' },
+            { id: 'b10', name: 'Jambolan', emoji: '🫐', weight: 0.5, tag: 'buah', khas: true },
+            { id: 'b11', name: 'Kersen', emoji: '🍒', weight: 0.5, tag: 'buah', khas: true },
+            { id: 'b12', name: 'Kelengkeng', emoji: '🟤', weight: 0.6, tag: 'buah' },
+            { id: 'b13', name: 'Alpukat', emoji: '🥑', weight: 0.8, tag: 'buah' },
+            { id: 'b14', name: 'Buah Naga', emoji: '🐉', weight: 0.8, tag: 'buah' },
+            { id: 'b15', name: 'Nanas', emoji: '🍍', weight: 0.8, tag: 'buah' },
+            { id: 'd1', name: 'Air Putih', emoji: '💧', weight: 0, tag: 'minuman' },
+            { id: 'd2', name: 'Susu', emoji: '🥛', weight: 0, tag: 'minuman' },
+            { id: 'd3', name: 'Susu Cokelat', emoji: '🍫', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd4', name: 'Jus Jeruk', emoji: '🧃', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd5', name: 'Jus Mangga', emoji: '🧃', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd6', name: 'Jus Alpukat', emoji: '🥑', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd7', name: 'Jus Semangka', emoji: '🧃', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd8', name: 'Es Teh Manis', emoji: '🧋', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd9', name: 'Yoghurt', emoji: '🍶', weight: 0, tag: 'minuman' },
+            { id: 'd10', name: 'Es Buah', emoji: '🍧', weight: 0, tag: 'minuman', gula: true },
+            { id: 'd11', name: 'Saraba', emoji: '🍵', weight: 0, tag: 'minuman', gula: true, khas: true }
+        ];
+
+        function openLoginModal() {
+            const select = document.getElementById('login-group-select');
+            select.innerHTML = state.groups.map((g, idx) => `
+                <option value="${idx}" ${idx === state.selectedGroupIndex ? 'selected' : ''}>
+                    ${g} ${idx === state.selectedGroupIndex ? '(Sesi Aktif)' : ''}
+                </option>
+            `).join('');
+            document.getElementById('modal-login').classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('modal-login').classList.add('hidden');
+        }
+
+        function submitGroupLogin() {
+            const selectedIdx = parseInt(document.getElementById('login-group-select').value);
+            const pin = document.getElementById('login-pin-input').value.trim();
+
+            if (pin && pin !== '1234' && state.groupPins[selectedIdx] && pin !== state.groupPins[selectedIdx]) {
+                alert('Kode PIN Salah! Silakan coba lagi.');
+                return;
+            }
+
+            state.selectedGroupIndex = selectedIdx;
+            state.isLoggedIn = true;
+            closeLoginModal();
+            
+            updateActiveGroupUI();
+            clearPlate();
+            resetKioskTimer();
+            state.spectatorVotes = {};
+            state.isMatrixRevealed = false;
+            document.getElementById('voting-results-summary').classList.add('hidden');
+
+            state.kioskStep = 'plate';
+            switchTab('aktivitas');
+            playSound('finish');
+            try { confetti({ particleCount: 50, spread: 60, origin: { y: 0.5 } }); } catch(e) {}
+            showStepPopup(1);
+        }
+
+        function updateActiveGroupUI() {
+            const groupName = state.groups[state.selectedGroupIndex];
+            const banner = document.getElementById('banner-active-group');
+            if (banner) banner.innerText = `${groupName} (Sesi Aktif)`;
+
+            const loginBtn = document.getElementById('btn-login-status');
+            if (loginBtn) {
+                loginBtn.innerHTML = `👤 Sesi: ${groupName}`;
+                loginBtn.className = "px-3.5 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-900 font-heading font-bold rounded-2xl text-xs md:text-sm shadow transition-all flex items-center gap-1.5";
+            }
+        }
+
+        function completeSessionAndNextGroup() {
+            let nextIndex = state.selectedGroupIndex + 1;
+            if (nextIndex >= state.groups.length) {
+                nextIndex = 0;
+            }
+            
+            if (confirm(`Selesaikan sesi ${state.groups[state.selectedGroupIndex]} dan lanjut ke giliran ${state.groups[nextIndex]}?`)) {
+                showGroupStartModal(nextIndex);
+            }
+        }
+
+        function toggleAudio() {
+            state.isAudioMuted = !state.isAudioMuted;
+            const icon = state.isAudioMuted ? '🔇' : '🔊';
+            document.getElementById('btn-audio-mobile').innerText = icon;
+            document.getElementById('btn-audio-desktop').innerText = icon;
+        }
+
+        function playSound(type) {
+            if (state.isAudioMuted) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'add') {
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.1);
+                } else if (type === 'timer') {
+                    osc.frequency.setValueAtTime(880, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.08);
+                } else if (type === 'finish') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.4);
+                }
+            } catch(e) {}
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+            const navs = ['aktivitas', 'kiosk', 'evaluator', 'scoreboard'];
+            navs.forEach(n => {
+                const btn = document.getElementById(`nav-${n}`);
+                if (n === (tab === 'hasil' ? 'evaluator' : tab)) {
+                    btn.className = "px-3.5 py-2 md:px-5 md:py-2.5 rounded-xl font-heading text-xs md:text-sm font-bold bg-white text-brand-dark shadow transition-all flex items-center gap-1.5";
+                } else {
+                    btn.className = "px-3.5 py-2 md:px-5 md:py-2.5 rounded-xl font-heading text-xs md:text-sm font-bold text-white hover:bg-white/10 transition-all flex items-center gap-1.5";
+                }
+            });
+
+            if (tab === 'kiosk') applyKioskStep();
+            renderStepper(tab);
+            if (tab === 'evaluator') {
+                runEvaluator();
+                if (!state.matrixPopupShown) { state.matrixPopupShown = true; pauseKioskTimer(); showStepPopup(4); }
+            }
+            if (tab === 'scoreboard') renderScoreboard();
+        }
+
+        function openHelpModal() { document.getElementById('modal-help').classList.remove('hidden'); }
+        function closeHelpModal() { document.getElementById('modal-help').classList.add('hidden'); }
+
+        function openSettingsModal() {
+            renderGroupInputs();
+            document.getElementById('modal-settings').classList.remove('hidden');
+        }
+        function closeSettingsModal() { document.getElementById('modal-settings').classList.add('hidden'); }
+
+        function changeGroupCount(count) {
+            const num = parseInt(count);
+            while (state.groups.length < num) {
+                state.groups.push(`Kelompok ${state.groups.length + 1}`);
+                state.scores.push(0);
+            }
+            if (state.groups.length > num) {
+                state.groups = state.groups.slice(0, num);
+                state.scores = state.scores.slice(0, num);
+            }
+            if (state.selectedGroupIndex >= num) state.selectedGroupIndex = 0;
+            renderGroupInputs();
+        }
+
+        function renderGroupInputs() {
+            const container = document.getElementById('custom-group-names-inputs');
+            container.innerHTML = state.groups.map((g, idx) => `
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-xs text-slate-500 min-w-[60px]">Kelompok ${idx+1}:</span>
+                    <input type="text" value="${g}" id="group-name-input-${idx}" class="flex-1 p-2 bg-slate-100 border border-slate-300 rounded-xl font-bold text-xs">
+                </div>
+            `).join('');
+        }
+
+        function saveGroupSettings() {
+            state.groups = state.groups.map((_, idx) => {
+                const val = document.getElementById(`group-name-input-${idx}`).value.trim();
+                return val || `Kelompok ${idx + 1}`;
+            });
+            closeSettingsModal();
+            renderScoreboard();
+            runEvaluator();
+        }
+
+        function filterMenu(tag) {
+            state.activeFilter = tag;
+            const filterBtns = ['all', 'karbo', 'protein', 'sayur', 'buah', 'minuman'];
+            filterBtns.forEach(t => {
+                const btn = document.getElementById(`filter-${t}`);
+                if (t === tag) btn.className = "px-2.5 py-1 bg-brand-dark text-white text-xs font-bold rounded-xl shadow transition-all";
+                else btn.className = "px-2.5 py-1 bg-white hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all";
+            });
+            renderMenuList();
+        }
+
+        function startKioskTimer() {
+            if (state.isKioskTimerRunning) return;
+            state.isKioskTimerRunning = true;
+            document.getElementById('kiosk-timeup-banner').classList.add('hidden');
+            
+            state.kioskTimer = setInterval(() => {
+                state.kioskTimeLeft--;
+                updateKioskTimerDisplay();
+
+                if (state.kioskTimeLeft <= 0) {
+                    clearInterval(state.kioskTimer);
+                    state.isKioskTimerRunning = false;
+                    playSound('finish');
+                    document.getElementById('kiosk-timeup-banner').classList.remove('hidden');
+                }
+            }, 1000);
+        }
+
+        function pauseKioskTimer() {
+            clearInterval(state.kioskTimer);
+            state.isKioskTimerRunning = false;
+        }
+
+        function resetKioskTimer() {
+            clearInterval(state.kioskTimer);
+            state.isKioskTimerRunning = false;
+            state.kioskTimeLeft = 120;
+            updateKioskTimerDisplay();
+            document.getElementById('kiosk-timeup-banner').classList.add('hidden');
+        }
+
+        function updateKioskTimerDisplay() {
+            const mins = Math.floor(state.kioskTimeLeft / 60);
+            const secs = state.kioskTimeLeft % 60;
+            document.getElementById('kiosk-timer-display').innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function selectHunger(level) {
+            state.hungerLevel = level;
+            document.querySelectorAll('.hunger-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-emerald-400', 'border-emerald-400', 'border-amber-400', 'border-purple-400');
+                btn.classList.add('border-slate-200');
+            });
+            const activeBtn = document.getElementById(`hunger-${level}`);
+            activeBtn.classList.remove('border-slate-200');
+            
+            if (level === 'ringan') activeBtn.classList.add('border-amber-400', 'ring-2', 'ring-amber-400');
+            if (level === 'sedang') activeBtn.classList.add('border-emerald-400', 'ring-2', 'ring-emerald-400');
+            if (level === 'berat') activeBtn.classList.add('border-purple-400', 'ring-2', 'ring-purple-400');
+            
+            updatePlateVisual();
+        }
+
+        function selectPlateStyle(style) {
+            state.plateStyle = style;
+            document.querySelectorAll('.plate-style-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-emerald-400', 'border-emerald-500', 'border-amber-400', 'border-purple-400');
+                btn.classList.add('border-slate-200');
+            });
+            const activeBtn = document.getElementById(`plate-style-${style}`);
+            activeBtn.classList.remove('border-slate-200');
+
+            if (style === 'small') activeBtn.classList.add('border-amber-400', 'ring-2', 'ring-amber-400');
+            if (style === 'medium') activeBtn.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-400');
+            if (style === 'large') activeBtn.classList.add('border-purple-400', 'ring-2', 'ring-purple-400');
+
+            const titleMap = {
+                'small': 'Piring Kecil',
+                'medium': 'Piring Sedang',
+                'large': 'Piring Besar'
+            };
+            document.getElementById('current-plate-title').innerText = titleMap[style];
+
+            const visualPlate = document.getElementById('visual-plate');
+            visualPlate.className = `plate-container plate-${style} flex flex-wrap items-center justify-center p-6 gap-2.5 content-center relative`;
+        }
+
+        function addToPlate(id, category) {
+            const list = category === 'snack' ? snackMenu : mainMenu;
+            const item = list.find(i => i.id === id);
+            if (!item) return;
+
+            state.plateItems.push({ ...item, instanceId: Date.now() + Math.random() });
+            playSound('add');
+            updatePlateVisual();
+        }
+
+        function removeFromPlate(index) {
+            state.plateItems.splice(index, 1);
+            playSound('add');
+            updatePlateVisual();
+        }
+
+        function clearPlate() {
+            state.plateItems = [];
+            playSound('add');
+            updatePlateVisual();
+        }
+
+        function calculatePortionWeight() {
+            const totalWeight = state.plateItems.reduce((sum, i) => sum + i.weight, 0);
+            let portionClass = 'Kosong';
+
+            if (totalWeight > 0 && totalWeight <= 2.5) portionClass = 'Ringan';
+            else if (totalWeight > 2.5 && totalWeight <= 5.5) portionClass = 'Sedang';
+            else if (totalWeight > 5.5) portionClass = 'Berat / Jumbo';
+
+            return { totalWeight, portionClass };
+        }
+
+        function updatePlateVisual() {
+            const visualPlate = document.getElementById('visual-plate');
+            const countTag = document.getElementById('plate-count');
+            const calcTag = document.getElementById('calc-portion-tag');
+
+            countTag.innerText = `${state.plateItems.length} Item`;
+
+            if (state.plateItems.length === 0) {
+                visualPlate.innerHTML = `<span class="text-xs font-bold text-slate-400 text-center p-4">Piring masih kosong.<br>Klik menu di samping untuk menambah makanan!</span>`;
+                calcTag.innerText = 'Kosong';
+                calcTag.className = 'font-heading text-xs md:text-sm font-bold bg-slate-200 text-slate-700 px-3 py-1 rounded-full';
+            } else {
+                visualPlate.innerHTML = state.plateItems.map((item, idx) => `
+                    <button onclick="removeFromPlate(${idx})" title="Klik untuk hapus" class="food-item-anim bg-white/90 hover:bg-rose-100 border-2 border-slate-200 hover:border-rose-400 p-2 rounded-2xl shadow-md flex items-center gap-1.5 transition-all transform hover:scale-105 active:scale-90 group">
+                        <span class="text-2xl md:text-3xl">${item.emoji}</span>
+                        <span class="text-[11px] font-bold text-slate-800 group-hover:text-rose-700">${item.name}</span>
+                        <span class="text-[10px] text-rose-500 opacity-0 group-hover:opacity-100 transition-all font-bold">❌</span>
+                    </button>
+                `).join('');
+
+                const { portionClass } = calculatePortionWeight();
+                calcTag.innerText = `Porsi ${portionClass}`;
+                if (portionClass === 'Ringan') calcTag.className = 'font-heading text-xs md:text-sm font-bold bg-amber-200 text-amber-900 px-3 py-1 rounded-full';
+                else if (portionClass === 'Sedang') calcTag.className = 'font-heading text-xs md:text-sm font-bold bg-emerald-200 text-emerald-900 px-3 py-1 rounded-full';
+                else calcTag.className = 'font-heading text-xs md:text-sm font-bold bg-purple-200 text-purple-900 px-3 py-1 rounded-full';
+            }
+        }
+
+        function selectGroup(index) {
+            state.selectedGroupIndex = index;
+            state.spectatorVotes = {};
+            state.isMatrixRevealed = false;
+            document.getElementById('voting-results-summary').classList.add('hidden');
+            renderScoreboard();
+            runEvaluator();
+        }
+
+        function renderSpectatorVotingCards() {
+            const container = document.getElementById('spectator-voting-cards');
+            const activeGroupIdx = state.selectedGroupIndex;
+            const presenterBadge = document.getElementById('active-presenter-badge');
+            presenterBadge.innerText = `${state.groups[activeGroupIdx]} Sedang Maju 🎤`;
+
+            let html = '';
+            for (let i = 0; i < state.groups.length; i++) {
+                if (i === activeGroupIdx) continue;
+
+                const currentVote = state.spectatorVotes[i] || null;
+
+                html += `
+                    <div class="p-3 rounded-2xl bg-white/10 border border-white/20 flex flex-col justify-between">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-heading text-xs font-bold text-amber-300 truncate">${state.groups[i]}</span>
+                            <span class="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-bold">
+                                ${currentVote ? '✓ Memilih' : 'Belum'}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1">
+                            <button onclick="setSpectatorVote(${i}, 'PAS')" class="py-1 px-1 rounded-xl font-heading text-[10px] font-bold transition-all ${currentVote === 'PAS' ? 'bg-emerald-500 text-white shadow-md ring-2 ring-white' : 'bg-white/15 hover:bg-white/25 text-white'}">
+                                🌟 PAS
+                            </button>
+                            <button onclick="setSpectatorVote(${i}, 'BERLEBIHAN')" class="py-1 px-1 rounded-xl font-heading text-[10px] font-bold transition-all ${currentVote === 'BERLEBIHAN' ? 'bg-rose-500 text-white shadow-md ring-2 ring-white' : 'bg-white/15 hover:bg-white/25 text-white'}">
+                                ⚠️ LEBIH
+                            </button>
+                            <button onclick="setSpectatorVote(${i}, 'KURANG')" class="py-1 px-1 rounded-xl font-heading text-[10px] font-bold transition-all ${currentVote === 'KURANG' ? 'bg-amber-500 text-white shadow-md ring-2 ring-white' : 'bg-white/15 hover:bg-white/25 text-white'}">
+                                🍲 KURANG
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+
+            const totalVotes = Object.keys(state.spectatorVotes).length;
+            const targetVotes = state.groups.length - 1;
+            const statusTag = document.getElementById('voting-status-tag');
+            if (totalVotes === targetVotes) {
+                statusTag.innerText = `✓ Semua ${targetVotes} Kelompok Sudah Memilih!`;
+                statusTag.className = "text-xs font-bold bg-emerald-500 text-white px-3 py-1 rounded-xl animate-pulse";
+            } else {
+                statusTag.innerText = `${totalVotes}/${targetVotes} Kelompok Memilih`;
+                statusTag.className = "text-xs font-bold bg-white/20 px-3 py-1 rounded-xl text-amber-300";
+            }
+        }
+
+        function setSpectatorVote(groupIndex, voteChoice) {
+            state.spectatorVotes[groupIndex] = voteChoice;
+            playSound('add');
+            renderSpectatorVotingCards();
+        }
+
+        function resetVotingForGroup() {
+            state.spectatorVotes = {};
+            state.isMatrixRevealed = false;
+            document.getElementById('voting-results-summary').classList.add('hidden');
+            runEvaluator();
+        }
+
+        function getActualMatrixResult() {
+            const { portionClass } = calculatePortionWeight();
+            if (portionClass === 'Kosong') return 'KOSONG';
+
+            let isMatched = false;
+            let resultType = 'PAS';
+
+            if (state.hungerLevel === 'ringan' && portionClass === 'Ringan') isMatched = true;
+            else if (state.hungerLevel === 'sedang' && portionClass === 'Sedang') isMatched = true;
+            else if (state.hungerLevel === 'berat' && portionClass === 'Berat / Jumbo') isMatched = true;
+            else if (
+                (state.hungerLevel === 'ringan' && (portionClass === 'Sedang' || portionClass === 'Berat / Jumbo')) ||
+                (state.hungerLevel === 'sedang' && portionClass === 'Berat / Jumbo')
+            ) {
+                resultType = 'BERLEBIHAN';
+            } else {
+                resultType = 'KURANG';
+            }
+
+            return isMatched ? 'PAS' : resultType;
+        }
+
+        function revealMatrixAndCalculateScores() {
+            const targetVotes = state.groups.length - 1;
+            const totalVotes = Object.keys(state.spectatorVotes).length;
+            if (totalVotes < targetVotes) {
+                alert(`Semua ${targetVotes} kelompok penonton harus memilih tebakan terlebih dahulu sebelum membuka Matriks!`);
+                return;
+            }
+
+            const actualResult = getActualMatrixResult();
+            if (actualResult === 'KOSONG') {
+                alert("Piring kelompok penyaji masih kosong! Silakan isi makanan terlebih dahulu di Kios.");
+                return;
+            }
+
+            state.isMatrixRevealed = true;
+
+            const resultsGrid = document.getElementById('voting-results-grid');
+            let resultsHtml = '';
+            state.lastVoteResults = [];
+
+            for (let i = 0; i < state.groups.length; i++) {
+                if (i === state.selectedGroupIndex) continue;
+
+                const userVote = state.spectatorVotes[i];
+                const isCorrect = (userVote === actualResult);
+                state.lastVoteResults.push({ i, vote: userVote, correct: isCorrect });
+
+                if (isCorrect) {
+                    state.scores[i] += 1;
+                    resultsHtml += `
+                        <div class="p-3 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-center">
+                            <span class="text-xs font-bold block uppercase text-emerald-700 truncate">${state.groups[i]}</span>
+                            <span class="font-heading text-xs font-bold text-emerald-800 block my-0.5">Tebakan: ${userVote}</span>
+                            <span class="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full inline-block">🎯 BENAR (+1 Koin)</span>
+                        </div>
+                    `;
+                } else {
+                    state.scores[i] = Math.max(0, state.scores[i] - 1);
+                    resultsHtml += `
+                        <div class="p-3 rounded-2xl bg-rose-100 border border-rose-300 text-rose-900 text-center">
+                            <span class="text-xs font-bold block uppercase text-rose-700 truncate">${state.groups[i]}</span>
+                            <span class="font-heading text-xs font-bold text-rose-800 block my-0.5">Tebakan: ${userVote}</span>
+                            <span class="text-[10px] bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full inline-block">❌ SALAH (-1 Koin)</span>
+                        </div>
+                    `;
+                }
+            }
+
+            resultsGrid.innerHTML = resultsHtml;
+            document.getElementById('voting-results-summary').classList.remove('hidden');
+
+            renderScoreboard();
+            runEvaluator();
+            playSound('finish');
+
+            try { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); } catch(e) {}
+            startHasilFlow(actualResult);
+        }
+
+
+        // ===== Komposisi Isi Piringku =====
+        function getKomposisi() {
+            const c = { karbo: 0, protein: 0, sayur: 0, buah: 0, minuman: 0 };
+            let manis = 0, air = 0;
+            state.plateItems.forEach(i => { c[i.tag]++; if (i.tag === 'minuman') { if (i.gula) manis++; if (i.name === 'Air Putih') air++; } });
+            const sb = c.sayur + c.buah;
+            const n = c.karbo + c.protein + sb;
+            const pct = v => n ? Math.round(v / n * 100) : 0;
+            let drinkNote = '💧 Jangan lupa minum air putih!';
+            if (air > 0) drinkNote = '💧 Hebat, ada air putih!';
+            else if (manis > 0) drinkNote = '⚠️ Minuman manis banyak gulanya. Air putih paling sehat.';
+            else if (c.minuman > 0) drinkNote = '👍 Minumanmu baik. Air putih juga tetap penting.';
+            const tips = [];
+            if (n === 0) return { n, c, sayurPct: 0, pokokPct: 0, drinkNote, ok: false, tips: ['Piring masih kosong.'] };
+            if (c.karbo === 0) tips.push('Tambahkan makanan pokok (karbohidrat) sebagai bahan bakar utama.');
+            if (c.protein === 0) tips.push('Tambahkan lauk pauk (protein) untuk membangun tubuh.');
+            if (sb === 0) tips.push('Tambahkan sayur dan buah.');
+            else if (sb / n < 0.35) tips.push('Sayur dan buah masih sedikit. Targetnya sekitar separuh piring.');
+            else if (sb / n > 0.6) tips.push('Sayur dan buah sudah banyak. Tambah makanan pokok atau lauk.');
+            return { n, c, sayurPct: pct(sb), pokokPct: pct(c.karbo + c.protein), drinkNote, ok: tips.length === 0, tips };
+        }
+        function renderKioskGuide() {
+            const el = document.getElementById('kiosk-guide');
+            if (!el) return;
+            const target = { ringan: 'Porsi Ringan', sedang: 'Porsi Sedang', berat: 'Porsi Berat / Jumbo' }[state.hungerLevel];
+            const k = getKomposisi();
+            el.innerHTML = `<div>🎯 Target porsi aktivitasmu: <span class="text-brand-blue">${target}</span></div>` +
+                (k.n ? `<div>🍽️ Sayur/Buah ${k.sayurPct}% | Pokok & Lauk ${k.pokokPct}% ${k.ok ? '⭐ Seimbang' : '⚠️ Belum seimbang'}</div>` : '');
+        }
+        function renderKomposisi() {
+            const el = document.getElementById('komposisi-body');
+            if (!el) return;
+            const k = getKomposisi();
+            if (!k.n) { el.innerHTML = `<p class="text-sm text-emerald-800 font-bold">Piring masih kosong.</p><p class="mt-1 text-sm font-bold text-sky-800">${k.drinkNote}</p>`; return; }
+            const bar = (label, v, color) => `<div class="mb-2"><div class="flex justify-between text-xs font-bold"><span>${label}</span><span>${v}%</span></div><div class="h-3 bg-white rounded-full border border-emerald-200 overflow-hidden"><div class="h-full ${color}" style="width:${v}%"></div></div></div>`;
+            el.innerHTML = bar('🥦🍎 Sayur dan Buah (target sekitar 50%)', k.sayurPct, 'bg-emerald-500') +
+                bar('🍚🍗 Makanan Pokok dan Lauk (target sekitar 50%)', k.pokokPct, 'bg-amber-400') +
+                (k.ok ? '<p class="mt-2 text-sm font-bold text-emerald-800">⭐ Isi Piringku seimbang. Hebat!</p>'
+                      : '<ul class="mt-2 text-sm font-bold text-amber-800 list-disc pl-5">' + k.tips.map(t => `<li>${t}</li>`).join('') + '</ul>') +
+                `<p class="mt-2 text-sm font-bold text-sky-800">${k.drinkNote}</p>`;
+        }
+        const _renderMenuListBase = renderMenuList;
+        renderMenuList = function () {
+            _renderMenuListBase();
+            ['snack', 'main'].forEach(k => {
+                const c = document.getElementById(k + '-menu-list');
+                if (c && c.parentElement) c.parentElement.classList.toggle('hidden', c.children.length === 0);
+            });
+        };
+        const _updatePlateVisualBase = updatePlateVisual;
+        updatePlateVisual = function () { _updatePlateVisualBase(); renderKioskGuide(); };
+        const _generateScriptBase = generateScript;
+        generateScript = function (isMatched, actualResult, portionClass) {
+            _generateScriptBase(isMatched, actualResult, portionClass);
+            if (!state.isMatrixRevealed || actualResult === 'KOSONG') return;
+            const el = document.getElementById('spokesperson-script');
+            const k = getKomposisi();
+            const add = k.ok ? ' Isi piring kami juga seimbang: ada makanan pokok, lauk, serta sayur dan buah.'
+                             : ' Isi piring kami masih perlu diperbaiki agar sesuai Isi Piringku.';
+            el.innerText = el.innerText.replace(/"$/, '') + add + '"';
+        };
+
+        // ===== Pop-up aktivitas (bahasa sederhana untuk kelas III) =====
+        function pickActivity(level) {
+            selectHunger(level);
+            const d = {
+                ringan: { e: '🍎', icon: '🧘', t: 'Kamu memilih Aktivitas Ringan!', a: 'Kamu akan duduk dan bermain tenang.', b: 'Ambil makanan sedikit saja ya!', food: '🍚 🥦', bars: 1, barColor: 'bg-amber-400', label: 'Sedikit tenaga', g: '🎯 Target: Porsi Ringan', c: 'bg-amber-100 text-amber-900', border: 'border-amber-300', speak: 'Kamu memilih aktivitas ringan. Kamu akan duduk dan bermain tenang. Tubuhmu memakai sedikit tenaga. Jadi, ambil makanan sedikit saja ya!' },
+                sedang: { e: '🍱', icon: '📚', t: 'Kamu memilih Aktivitas Sedang!', a: 'Kamu akan belajar dan bermain seperti biasa.', b: 'Ambil makanan secukupnya ya!', food: '🍚 🍗 🥦 🍎', bars: 2, barColor: 'bg-emerald-400', label: 'Tenaga secukupnya', g: '🎯 Target: Porsi Sedang', c: 'bg-emerald-100 text-emerald-900', border: 'border-emerald-300', speak: 'Kamu memilih aktivitas sedang. Kamu akan belajar dan bermain seperti biasa. Tubuhmu memakai tenaga secukupnya. Jadi, ambil makanan secukupnya ya!' },
+                berat:  { e: '⚽', icon: '🏃', t: 'Kamu memilih Aktivitas Berat!', a: 'Kamu akan berlari dan berolahraga.', b: 'Ambil makanan yang banyak ya! Kalau sedikit, kamu bisa lemas seperti Doni.', food: '🍚 🍛 🍗 🥚 🥦 🥕 🍌', bars: 3, barColor: 'bg-purple-500', label: 'Banyak tenaga!', g: '🎯 Target: Porsi Berat / Jumbo', c: 'bg-purple-100 text-purple-900', border: 'border-purple-300', speak: 'Kamu memilih aktivitas berat. Kamu akan berlari dan berolahraga. Tubuhmu memakai banyak tenaga. Kalau makan sedikit, kamu bisa lemas seperti Doni. Ambil makanan yang banyak ya!' }
+            }[level];
+            window._actSpeech = d.speak;
+            document.getElementById('act-emoji').innerText = d.e;
+            document.getElementById('act-title').innerText = d.t;
+            document.getElementById('act-do-icon').innerText = d.icon;
+            document.getElementById('act-line1').innerText = d.a;
+            document.getElementById('act-line2').innerText = d.b;
+            document.getElementById('act-food').innerText = d.food;
+            document.getElementById('act-card').className = 'bg-white rounded-[2rem] max-w-md w-full p-5 md:p-6 text-center space-y-3 border-8 shadow-2xl max-h-[95vh] overflow-y-auto act-pop ' + d.border;
+            document.getElementById('act-energy').innerHTML = [1, 2, 3].map(n =>
+                `<div class="act-bar ${n <= d.bars ? 'on ' + d.barColor : ''}" style="animation-delay:${n * 0.12}s"></div>`).join('');
+            const lb = document.getElementById('act-energy-label');
+            lb.innerText = d.label;
+            lb.className = 'font-heading font-bold text-base mt-1 ' + d.c.split(' ')[1];
+            const tg = document.getElementById('act-target');
+            tg.innerText = d.g;
+            tg.className = 'inline-block px-5 py-2.5 rounded-2xl font-heading font-bold text-lg ' + d.c;
+            document.getElementById('modal-activity').classList.remove('hidden');
+            playSound('add');
+            speakActivity();
+        }
+        function speakActivity() {
+            try {
+                if (state.isAudioMuted || !window.speechSynthesis || !window._actSpeech) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(window._actSpeech);
+                u.lang = 'id-ID';
+                u.rate = 0.9;
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
+        }
+        function closeActivityPopup() {
+            try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+            document.getElementById('modal-activity').classList.add('hidden');
+        }
+
+        // ===== Halaman 1: Pilih Aktivitas =====
+        function goToKiosk() {
+            state.kioskStep = 'plate';
+            state.matrixPopupShown = false;
+            resetKioskTimer();
+            switchTab('kiosk');
+            playSound('finish');
+            showStepPopup(2);
+        }
+        // ===== Pop-up Langkah 2, 3, dan 4 =====
+        const stepPopupData = {
+            1: {
+                badge: 'Langkah 1 dari 4', e: '🎯', t: 'Pilih Aktivitasmu!', border: 'border-sky-300', tipC: 'bg-sky-100 text-sky-900', btn: 'Oke, Pilih Aktivitas! 👍',
+                rows: [['🧘', 'Ringan: duduk dan bermain tenang.'], ['📚', 'Sedang: belajar dan bermain seperti biasa.'], ['🏃', 'Berat: berlari dan berolahraga.']],
+                tip: '💡 Tanya kelompokmu: setelah makan, kita akan melakukan apa?',
+                speak: 'Langkah satu. Pilih aktivitasmu! Aktivitas ringan: duduk dan bermain tenang. Aktivitas sedang: belajar dan bermain seperti biasa. Aktivitas berat: berlari dan berolahraga. Tanya kelompokmu: setelah makan, kita akan melakukan apa?'
+            },
+            2: {
+                badge: 'Langkah 2 dari 4', e: '🍽️', t: 'Pilih Piringmu!', border: 'border-teal-300', tipC: 'bg-teal-100 text-teal-900', btn: 'Oke, Pilih Piring! 👍',
+                rows: [['🍌', 'Piring kecil untuk makan sedikit.'], ['🍛', 'Piring sedang untuk makan secukupnya.'], ['🍗', 'Piring besar untuk makan banyak.']],
+                tip: '💡 Ingat aktivitasmu tadi, lalu pilih piring yang cocok!',
+                speak: 'Langkah dua. Pilih piringmu! Piring kecil untuk makan sedikit. Piring sedang untuk makan secukupnya. Piring besar untuk makan banyak. Ingat aktivitasmu tadi, lalu pilih piring yang cocok!'
+            },
+            3: {
+                badge: 'Langkah 3 dari 4', e: '🍱', t: 'Pilih Menumu!', border: 'border-amber-300', tipC: 'bg-amber-100 text-amber-900', btn: 'Oke, Mulai! ⏳',
+                rows: [['👆', 'Klik makanan, lalu makanan masuk ke piring.'], ['🗑️', 'Klik makanan di piring untuk menghapusnya.'], ['⏳', 'Waktumu hanya 2 menit. Ayo berdiskusi dengan kelompok!']],
+                tip: '🥦🍎 Separuh piring sayur dan buah. 🍚🍗 Separuhnya nasi dan lauk. Jangan lupa air putih 💧',
+                speak: 'Langkah tiga. Pilih menumu! Klik makanan, lalu makanan masuk ke piring. Klik makanan di piring untuk menghapusnya. Waktumu hanya dua menit. Ayo berdiskusi dengan kelompok! Separuh piring sayur dan buah. Separuhnya nasi dan lauk. Jangan lupa air putih.'
+            },
+            4: {
+                badge: 'Langkah 4 dari 4', e: '⚖️', t: 'Tebak, Lalu Cek!', border: 'border-purple-300', tipC: 'bg-purple-100 text-purple-900', btn: 'Oke, Mulai Menebak! 🗳️',
+                rows: [['🗳️', 'Kelompok lain menebak: PAS, LEBIH, atau KURANG.'], ['🔒', 'Tekan tombol kuning untuk membuka matriks.'], ['🪙', 'Tebakan benar dapat +1 koin. Tebakan salah -1 koin.']],
+                tip: '🎤 Setelah itu, juru bicara menjelaskan pilihan kelompok di depan kelas!',
+                speak: 'Langkah empat. Tebak, lalu cek! Kelompok lain menebak: pas, lebih, atau kurang. Tekan tombol kuning untuk membuka matriks. Tebakan benar dapat tambah satu koin. Tebakan salah kurang satu koin. Setelah itu, juru bicara menjelaskan pilihan kelompok di depan kelas!'
+            }
+        };
+        function showStepPopup(n, custom) {
+            const d = custom || stepPopupData[n];
+            if (!d) return;
+            state.currentStepPopup = n;
+            window._stepSpeech = d.speak;
+            document.getElementById('stp-badge').innerText = d.badge;
+            document.getElementById('stp-emoji').innerText = d.e;
+            document.getElementById('stp-title').innerText = d.t;
+            document.getElementById('stp-rows').innerHTML = d.rows.map(r =>
+                `<div class="bg-slate-50 rounded-2xl p-3 flex items-center gap-3 border-2 border-slate-200"><span class="text-4xl">${r[0]}</span><p class="text-lg font-bold text-slate-800 leading-snug">${r[1]}</p></div>`).join('');
+            const tip = document.getElementById('stp-tip');
+            tip.innerText = d.tip;
+            tip.className = 'rounded-2xl px-4 py-3 font-heading font-bold text-base ' + d.tipC;
+            document.getElementById('stp-btn').innerText = d.btn;
+            document.getElementById('stp-card').className = 'bg-white rounded-[2rem] max-w-md w-full p-5 md:p-6 text-center space-y-3 border-8 shadow-2xl max-h-[95vh] overflow-y-auto act-pop ' + d.border;
+            document.getElementById('modal-step').classList.remove('hidden');
+            playSound('add');
+            speakStep();
+        }
+        // ===== Pop-up tebakan kelompok penonton =====
+        function openVotePopup() {
+            document.getElementById('vote-msg').innerText = '';
+            renderVotePopup();
+            document.getElementById('modal-vote').classList.remove('hidden');
+            window._voteSpeech = `Giliran ${state.groups[state.selectedGroupIndex]}. Lihat makanan di piring mereka. Menurutmu, porsinya pas, lebih, atau kurang? Setiap kelompok penonton memilih satu tebakan.`;
+            playSound('add');
+            speakVote();
+        }
+        function renderVotePopup() {
+            const hungerTxt = { ringan: '🧘 Aktivitas Ringan', sedang: '📚 Aktivitas Sedang', berat: '🏃 Aktivitas Berat' }[state.hungerLevel];
+            document.getElementById('vote-title').innerText = `Tebak Porsi ${state.groups[state.selectedGroupIndex]}!`;
+            document.getElementById('vote-activity').innerText = `Aktivitas mereka: ${hungerTxt}. Isi piring (${state.plateItems.length} item):`;
+            document.getElementById('vote-food').innerHTML = state.plateItems.length
+                ? state.plateItems.map(i => `<span title="${i.name}">${i.emoji}</span>`).join('')
+                : '<span class="text-sm font-bold text-rose-500">Piring masih kosong.</span>';
+            const opts = [['PAS', '🌟 PAS', 'bg-emerald-500'], ['BERLEBIHAN', '⚠️ LEBIH', 'bg-rose-500'], ['KURANG', '🍲 KURANG', 'bg-amber-500']];
+            let html = '';
+            state.groups.forEach((g, i) => {
+                if (i === state.selectedGroupIndex) return;
+                const v = state.spectatorVotes[i] || null;
+                html += `<div class="p-3 rounded-2xl bg-slate-50 border-2 border-slate-200">
+                    <div class="flex justify-between items-center mb-2"><span class="font-heading font-bold text-base text-brand-dark">${g}</span><span class="text-xs font-bold ${v ? 'text-emerald-600' : 'text-slate-400'}">${v ? '✓ Sudah memilih' : 'Belum memilih'}</span></div>
+                    <div class="grid grid-cols-3 gap-2">${opts.map(o => `<button onclick="setVoteFromPopup(${i}, '${o[0]}')" class="py-3 rounded-xl font-heading font-bold text-sm md:text-base transition-all active:scale-95 ${v === o[0] ? o[2] + ' text-white ring-4 ring-slate-300' : 'bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-100'}">${o[1]}</button>`).join('')}</div>
+                </div>`;
+            });
+            document.getElementById('vote-rows').innerHTML = html;
+        }
+        function setVoteFromPopup(i, choice) {
+            setSpectatorVote(i, choice);
+            renderVotePopup();
+        }
+        function speakVote() {
+            try {
+                if (state.isAudioMuted || !window.speechSynthesis || !window._voteSpeech) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(window._voteSpeech);
+                u.lang = 'id-ID'; u.rate = 0.9;
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
+        }
+        function closeVotePopup() {
+            try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+            document.getElementById('modal-vote').classList.add('hidden');
+        }
+        function submitVotesFromPopup() {
+            const msg = document.getElementById('vote-msg');
+            const target = state.groups.length - 1;
+            if (getActualMatrixResult() === 'KOSONG') { msg.innerText = 'Piring masih kosong. Kembali ke Langkah 3 untuk memilih menu.'; return; }
+            if (Object.keys(state.spectatorVotes).length < target) { msg.innerText = 'Semua kelompok penonton harus memilih dulu ya!'; return; }
+            closeVotePopup();
+            revealMatrixAndCalculateScores();
+        }
+
+        // ===== Pop-up hasil: kenapa porsinya pas / kurang / lebih =====
+        function showResultPopup(result) {
+            const hungerTxt = { ringan: 'Aktivitas Ringan', sedang: 'Aktivitas Sedang', berat: 'Aktivitas Berat' }[state.hungerLevel];
+            const { portionClass } = calculatePortionWeight();
+            const portionTxt = portionClass === 'Berat / Jumbo' ? 'Porsi Berat' : 'Porsi ' + portionClass;
+            const group = state.groups[state.selectedGroupIndex];
+            const first = ['🎯', `${group}: ${hungerTxt}, tetapi mengambil ${portionTxt}.`];
+            const cfg = {
+                PAS: { e: '🌟', t: 'Porsimu PAS! Hebat!', border: 'border-emerald-300', tipC: 'bg-emerald-100 text-emerald-900',
+                    rows: [first, ['✅', 'Makananmu sesuai dengan tenaga yang kamu pakai.'], ['⚡', 'Makanan adalah sumber energi. Tubuh mengubahnya menjadi energi gerak 🏃 dan energi panas 🔥.'], ['🌱', 'Tidak ada makanan yang tersisa, jadi tidak ada makanan yang terbuang!']],
+                    tip: '🌟 Pertahankan ya! Ambil makanan sesuai kebutuhan.',
+                    speak: `Porsimu pas! Hebat! ${group} memilih ${hungerTxt} dan mengambil ${portionTxt}. Makananmu sesuai dengan tenaga yang kamu pakai. Makanan adalah sumber energi. Tubuh mengubahnya menjadi energi gerak dan energi panas. Tidak ada makanan yang terbuang!` },
+                KURANG: { e: '🍲', t: 'Porsimu KURANG', border: 'border-amber-300', tipC: 'bg-amber-100 text-amber-900',
+                    rows: [first, ['⚠️', 'Makananmu terlalu sedikit untuk aktivitasmu.'], ['⚡', 'Makanan adalah sumber energi. Kalau makannya kurang, energi gerak dan energi panas tidak cukup. Tubuh jadi lemas seperti Doni 😵.'], ['🍚', 'Ayo tambah makanan sampai porsinya pas.']],
+                    tip: '💪 Makan secukupnya agar tubuhmu bertenaga!',
+                    speak: `Porsimu kurang. ${group} memilih ${hungerTxt}, tetapi hanya mengambil ${portionTxt}. Makananmu terlalu sedikit untuk aktivitasmu. Makanan adalah sumber energi. Kalau makannya kurang, energi gerak dan energi panas tidak cukup. Tubuh jadi lemas seperti Doni. Ayo tambah makanan sampai porsinya pas.` },
+                BERLEBIHAN: { e: '⚠️', t: 'Porsimu BERLEBIHAN', border: 'border-rose-300', tipC: 'bg-rose-100 text-rose-900',
+                    rows: [first, ['⚠️', 'Makananmu lebih banyak dari yang dibutuhkan tubuh.'], ['⚡', 'Makanan adalah sumber energi. Makanan yang tersisa lalu dibuang tidak bisa menjadi energi. Itu mubazir.'], ['🗑️', 'Membuang makanan sama dengan membuang energi yang dipakai untuk membuatnya.']],
+                    tip: '🌱 Ambil secukupnya dan habiskan makananmu!',
+                    speak: `Porsimu berlebihan. ${group} memilih ${hungerTxt}, tetapi mengambil ${portionTxt}. Makananmu lebih banyak dari yang dibutuhkan tubuh. Makanan adalah sumber energi. Makanan yang tersisa lalu dibuang tidak bisa menjadi energi. Itu mubazir. Membuang makanan sama dengan membuang energi yang dipakai untuk membuatnya.` }
+            }[result];
+            if (!cfg) return;
+            state.lastResult = result;
+            showStepPopup('result', { badge: 'Hasil Porsi', e: cfg.e, t: cfg.t, border: cfg.border, tipC: cfg.tipC, btn: 'Lanjut: Penjelasan Porsi 📖', rows: cfg.rows, tip: cfg.tip, speak: cfg.speak });
+        }
+
+        // ===== Pop-up perubahan energi =====
+        function showEnergyPopup(result) {
+            const extra = {
+                PAS: { r: ['😄', 'Porsimu pas, jadi energi gerak dan energi panas cukup. Kamu berlari kencang!'], c: 'border-emerald-300', t: 'bg-emerald-100 text-emerald-900', s: 'Porsimu pas, jadi energi gerak dan energi panas cukup. Kamu berlari kencang!' },
+                KURANG: { r: ['😵', 'Porsimu kurang, jadi energi gerak dan energi panas juga kurang. Kamu melambat dan lemas.'], c: 'border-amber-300', t: 'bg-amber-100 text-amber-900', s: 'Porsimu kurang, jadi energi gerak dan energi panas juga kurang. Kamu melambat dan lemas.' },
+                BERLEBIHAN: { r: ['🗑️', 'Porsimu berlebihan. Makanan sisa yang dibuang tidak bisa menjadi energi gerak dan energi panas.'], c: 'border-rose-300', t: 'bg-rose-100 text-rose-900', s: 'Porsimu berlebihan. Makanan sisa yang dibuang tidak bisa menjadi energi gerak dan energi panas.' }
+            }[result] || { r: ['🍽️', 'Makanan di piring bisa menjadi energi.'], c: 'border-sky-300', t: 'bg-sky-100 text-sky-900', s: 'Makanan di piring bisa menjadi energi.' };
+            showStepPopup('energy', {
+                badge: 'Perubahan Energi', e: '⚡', t: 'Dari Makanan Menjadi Tenaga!', border: extra.c, tipC: extra.t, btn: 'Lanjut: Halaman Energi ⚡',
+                rows: [
+                    ['🍽️', 'Makanan di piring adalah sumber energi.'],
+                    ['🏃', 'Energi gerak: untuk berlari dan menggerakkan tangan dan kaki.'],
+                    ['🔥', 'Energi panas: membuat badan hangat dan berkeringat.'],
+                    extra.r
+                ],
+                tip: '💡 Jadi, tubuh mengubah makanan menjadi energi gerak dan energi panas.',
+                speak: 'Dari makanan menjadi tenaga! Makanan di piring adalah sumber energi. Energi gerak untuk berlari dan menggerakkan tangan dan kaki. Energi panas membuat badan hangat dan berkeringat. ' + extra.s + ' Jadi, tubuh mengubah makanan menjadi energi gerak dan energi panas.'
+            });
+        }
+
+        // ===== Teks komitmen Zero Food Waste =====
+        const KOM_CHOICES = [
+            ['🍚', 'Kami akan mengambil makanan sesuai tenaga yang kami butuhkan.'],
+            ['🥦', 'Kami akan makan sayur dan buah supaya tubuh sehat.'],
+            ['🌍', 'Kami akan mengajak teman dan keluarga tidak membuang makanan.']
+        ];
+        function initKomitmen() {
+            state.komChoice = state.komChoice == null ? 0 : state.komChoice;
+            document.getElementById('kom-signed').classList.add('hidden');
+            const own = document.getElementById('kom-own');
+            if (own) own.value = '';
+            renderKomitmen();
+        }
+        function pickKomChoice(i) { state.komChoice = i; renderKomitmen(); }
+        function komitmenLines() {
+            const g = state.groups[state.selectedGroupIndex] || 'Kelompok kami';
+            const own = (document.getElementById('kom-own') || {}).value || '';
+            const lines = [
+                `Kami, ${g}, berjanji:`,
+                '1. Mengambil makanan secukupnya, sesuai tenaga yang kami butuhkan.',
+                '2. Menghabiskan makanan sampai bersih, karena makanan adalah sumber energi.',
+                '3. Tidak membuang makanan, agar tidak mubazir dan tidak merusak lingkungan.',
+                '4. Bersyukur atas makanan yang kami makan.',
+                '5. ' + KOM_CHOICES[state.komChoice || 0][1]
+            ];
+            if (own.trim()) lines.push('Janji pribadiku: ' + own.trim());
+            lines.push('Makan habis, energi penuh, Zero Food Waste!');
+            return lines;
+        }
+        function renderKomitmen() {
+            const lines = komitmenLines();
+            document.getElementById('kom-text').innerHTML = lines.map((l, i) =>
+                i === 0 ? `<p class="font-heading text-xl md:text-2xl">${l}</p>` : i === lines.length - 1 ? `<p class="font-heading text-center text-emerald-700 pt-1">🌱 ${l}</p>` : `<p>${l}</p>`).join('');
+            document.getElementById('kom-choices').innerHTML = KOM_CHOICES.map((c, i) =>
+                `<button onclick="pickKomChoice(${i})" class="p-3 rounded-2xl border-2 text-left font-bold text-sm transition-all active:scale-95 ${i === (state.komChoice || 0) ? 'bg-emerald-500 border-emerald-600 text-white ring-4 ring-emerald-200' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}"><span class="text-2xl block">${c[0]}</span>${c[1]}</button>`).join('');
+            const pr = document.getElementById('prompter-body');
+            if (pr) pr.innerHTML = lines.map((l, i) => `<p class="${i === 0 ? 'text-amber-300' : i === lines.length - 1 ? 'text-emerald-300 text-center' : ''}">${l}</p>`).join('');
+        }
+        function speakKomitmen() {
+            try {
+                if (state.isAudioMuted || !window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(komitmenLines().join(' '));
+                u.lang = 'id-ID'; u.rate = 0.85;
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
+        }
+        function openTeleprompter() { renderKomitmen(); document.getElementById('modal-prompter').classList.remove('hidden'); }
+        function closeTeleprompter() {
+            try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+            document.getElementById('modal-prompter').classList.add('hidden');
+        }
+        function signKomitmen() {
+            const g = state.groups[state.selectedGroupIndex] || 'Kelompok kami';
+            const el = document.getElementById('kom-signed');
+            el.innerHTML = `🎉 ${g} sudah berjanji Zero Food Waste! Ayo tepuk tangan untuk mereka! 👏`;
+            el.classList.remove('hidden');
+            playSound('finish');
+            try { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); } catch (e) {}
+        }
+
+        // ===== Halaman hasil (4 halaman berurutan) =====
+        const RES = {
+            PAS:        { label: 'PAS', word: 'pas', emoji: '🌟', box: 'bg-emerald-50 border-emerald-400', txt: 'text-emerald-900' },
+            BERLEBIHAN: { label: 'LEBIH', word: 'berlebihan', emoji: '⚠️', box: 'bg-rose-50 border-rose-400', txt: 'text-rose-900' },
+            KURANG:     { label: 'KURANG', word: 'kurang', emoji: '🍲', box: 'bg-amber-50 border-amber-400', txt: 'text-amber-900' }
+        };
+        function startHasilFlow(result) {
+            state.lastResult = result;
+            state.hasilPage = 1;
+            switchTab('hasil');
+            showHasilPage(1);
+            playSound('finish');
+        }
+        function showHasilPage(n) {
+            state.hasilPage = n;
+            if (!document.getElementById('tab-hasil').classList.contains('hidden') === false) switchTab('hasil');
+            document.querySelectorAll('.hasil-page').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== n));
+            const names = ['Voting', 'Porsi', 'Energi', 'Komitmen'];
+            document.getElementById('hasil-progress').innerHTML = names.map((nm, idx) => {
+                const k = idx + 1;
+                const cls = k === n ? 'bg-amber-400 text-slate-900 ring-2 ring-amber-200' : k < n ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500';
+                return `<span class="px-3 py-1.5 rounded-full ${cls}">${k < n ? '✓' : k}. ${nm}</span>`;
+            }).join('<span class="text-slate-300">➜</span>');
+            document.getElementById('hasil-back').classList.toggle('invisible', n === 1);
+            document.getElementById('hasil-next').innerText = ['Lanjut: Porsi Kelompok ➡️', 'Lanjut: Perubahan Energi ➡️', 'Lanjut: Komitmen Kita 📣', 'Lihat Papan Skor 🪙'][n - 1];
+            if (n === 1) renderHasilVoting();
+            if (n === 2) renderHasilPorsi();
+            if (n === 3) renderEnergyPanel();
+            if (n === 4) initKomitmen();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        function hasilBack() { if (state.hasilPage > 1) showHasilPage(state.hasilPage - 1); }
+        function hasilNext() {
+            if (state.hasilPage === 1) showResultPopup(state.lastResult);
+            else if (state.hasilPage === 2) showEnergyPopup(state.lastResult);
+            else if (state.hasilPage === 3) showHasilPage(4);
+            else switchTab('scoreboard');
+        }
+        function renderHasilVoting() {
+            const r = RES[state.lastResult] || RES.PAS;
+            const el = document.getElementById('hv-answer');
+            el.className = 'rounded-3xl p-5 border-4 text-center ' + r.box;
+            el.innerHTML = `<div class="text-6xl">${r.emoji}</div>
+                <div class="font-heading text-sm font-bold ${r.txt} mt-1">Jawaban yang benar untuk ${state.groups[state.selectedGroupIndex]}:</div>
+                <div class="font-heading text-3xl md:text-4xl font-bold ${r.txt}">Porsinya ${r.label}!</div>`;
+            document.getElementById('hv-cards').innerHTML = (state.lastVoteResults || []).map(v => {
+                const g = state.groups[v.i];
+                const vr = RES[v.vote] || RES.PAS;
+                return v.correct
+                    ? `<div class="p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-300 text-center space-y-1"><div class="font-heading font-bold text-emerald-900">${g}</div><div class="text-sm font-bold text-emerald-800">Tebakan: ${vr.emoji} ${vr.label}</div><div class="inline-block px-3 py-1 rounded-full bg-emerald-500 text-white font-bold text-sm">🎯 BENAR +1 🪙</div><div class="text-xs font-bold text-emerald-800">Total koin: ${state.scores[v.i]}</div></div>`
+                    : `<div class="p-4 rounded-2xl bg-rose-100 border-2 border-rose-300 text-center space-y-1"><div class="font-heading font-bold text-rose-900">${g}</div><div class="text-sm font-bold text-rose-800">Tebakan: ${vr.emoji} ${vr.label}</div><div class="inline-block px-3 py-1 rounded-full bg-rose-500 text-white font-bold text-sm">❌ SALAH -1 🪙</div><div class="text-xs font-bold text-rose-800">Total koin: ${state.scores[v.i]}</div></div>`;
+            }).join('') || '<p class="text-sm font-bold text-slate-500 col-span-full text-center">Belum ada data voting.</p>';
+        }
+        // Piring ideal: karbohidrat, protein, sayur, dan buah
+        function renderIdealCard() {
+            const c = getKomposisi().c;
+            const tiles = [
+                ['🍚', 'Karbohidrat', 'Sumber tenaga utama.', 'Nasi, jagung, ubi, roti', c.karbo, 'bg-amber-100 border-amber-300 text-amber-900'],
+                ['🍗', 'Protein', 'Membuat tubuh tumbuh dan kuat.', 'Ayam, ikan, telur, tempe', c.protein, 'bg-rose-100 border-rose-300 text-rose-900'],
+                ['🥦', 'Sayuran', 'Vitamin dan serat agar tubuh sehat dan perut lancar.', 'Bayam, wortel, brokoli', c.sayur, 'bg-emerald-100 border-emerald-300 text-emerald-900'],
+                ['🍎', 'Buah', 'Vitamin agar tubuh segar dan tidak mudah sakit.', 'Pisang, jeruk, pepaya', c.buah, 'bg-lime-100 border-lime-300 text-lime-900']
+            ];
+            const tileHtml = tiles.map(t => `<div class="p-3 rounded-2xl border-2 ${t[5]}">
+                <div class="flex items-center gap-2"><span class="text-4xl">${t[0]}</span><span class="font-heading text-lg font-bold">${t[1]}</span></div>
+                <p class="text-sm font-bold leading-snug mt-1">${t[2]}</p>
+                <p class="text-xs font-semibold opacity-80">${t[3]}</p>
+                <div class="mt-1.5 inline-block px-2 py-0.5 rounded-full text-xs font-bold ${t[4] > 0 ? 'bg-emerald-500 text-white' : 'bg-white text-rose-600 border border-rose-300'}">${t[4] > 0 ? '✅ Ada di piringmu' : '❌ Belum ada di piringmu'}</div>
+            </div>`).join('');
+            return `<div class="rounded-3xl p-5 border-4 bg-white border-teal-300">
+                <div class="flex items-start gap-3"><span class="text-5xl">🌈</span><div>
+                    <div class="font-heading text-xl md:text-2xl font-bold text-teal-900">Idealnya, makan itu ada 4 macam!</div>
+                    <p class="text-base font-bold text-slate-700 leading-snug mt-1">Dalam sekali makan, kita perlu karbohidrat, protein, sayur, dan buah. Ditambah air putih 💧</p></div></div>
+                <div class="mt-3 flex flex-col md:flex-row items-center gap-4">
+                    <div class="shrink-0 text-center">
+                        <div class="w-40 h-40 rounded-full border-8 border-white shadow-lg mx-auto" style="background:conic-gradient(#10b981 0 25%, #84cc16 25% 50%, #fbbf24 50% 75%, #fb7185 75% 100%)"></div>
+                        <div class="font-heading font-bold text-sm text-slate-700 mt-2">Piring Ideal</div>
+                        <div class="text-xs font-bold text-slate-500">Separuh sayur dan buah,<br>separuh nasi dan lauk</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">${tileHtml}</div>
+                </div>
+            </div>`;
+        }
+        // Penjelasan isi piring: terlalu banyak karbohidrat, tidak ada sayur/buah, dan sebaliknya
+        function renderKomposisiCard() {
+            const k = getKomposisi();
+            if (!k.n) return '';
+            const c = k.c, sb = c.sayur + c.buah, n = k.n;
+            const karboPct = Math.round(c.karbo / n * 100), proPct = Math.round(c.protein / n * 100);
+            const rows = [];
+            const karboHeavy = c.karbo / n > 0.5;
+            if (karboHeavy && sb === 0) rows.push(['🍚', 'Piringmu penuh karbohidrat dan tidak ada sayur atau buah. Tubuh dapat tenaga, tetapi kurang vitamin, mineral, dan serat.']);
+            else if (karboHeavy && sb / n < 0.35) rows.push(['🍚', 'Karbohidratmu terlalu banyak, sedangkan sayur dan buahnya sedikit. Tubuh dapat banyak tenaga, tetapi kurang vitamin dan serat.']);
+            else if (sb === 0) rows.push(['🥦', 'Piringmu belum ada sayur dan buah. Sayur dan buah membuat tubuh sehat dan perut lancar.']);
+            else if (sb / n > 0.6) rows.push(['🥦', 'Sayur dan buahmu sangat banyak, tetapi makanan pokok dan lauknya sedikit. Tubuh bisa kurang tenaga dan kurang zat pembangun.']);
+            if (c.karbo === 0) rows.push(['🍚', 'Piringmu belum ada makanan pokok (karbohidrat). Karbohidrat adalah bahan bakar utama tubuh, jadi tubuh mudah lemas.']);
+            if (c.protein === 0) rows.push(['🍗', 'Piringmu belum ada lauk (protein). Protein membantu tubuh tumbuh dan kuat.']);
+            else if (c.protein / n > 0.5) rows.push(['🍗', 'Lauknya terlalu banyak. Tambah makanan pokok, sayur, dan buah agar seimbang.']);
+            const ok = rows.length === 0;
+            if (ok) rows.push(['⭐', 'Isi piringmu sudah seimbang: ada makanan pokok, lauk, serta sayur dan buah. Hebat!']);
+            rows.push(['🥤', k.drinkNote.replace(/^\S+\s/, '')]);
+            const bar = (label, v, color) => `<div class="mb-2"><div class="flex justify-between text-sm font-bold"><span>${label}</span><span>${v}%</span></div><div class="h-4 bg-white rounded-full border border-emerald-200 overflow-hidden"><div class="h-full ${color}" style="width:${v}%"></div></div></div>`;
+            return `<div class="rounded-3xl p-5 border-4 ${ok ? 'bg-emerald-50 border-emerald-400' : 'bg-orange-50 border-orange-300'}">
+                <div class="flex items-start gap-3"><span class="text-5xl">🍽️</span><div class="flex-1"><div class="font-heading text-xl md:text-2xl font-bold ${ok ? 'text-emerald-900' : 'text-orange-900'}">Bagaimana isi piringmu?</div>
+                <p class="text-sm font-bold text-slate-600 mt-1">Isi Piringku: separuh sayur dan buah, separuh makanan pokok dan lauk.</p></div></div>
+                <div class="mt-3">${bar('🍚 Karbohidrat', karboPct, 'bg-amber-400')}${bar('🍗 Protein (lauk)', proPct, 'bg-rose-400')}${bar('🥦🍎 Sayur dan Buah', k.sayurPct, 'bg-emerald-500')}</div>
+                <ul class="mt-2 space-y-1.5 text-base font-bold ${ok ? 'text-emerald-900' : 'text-orange-900'} leading-snug">${rows.map(r => `<li>${r[0]} ${r[1]}</li>`).join('')}</ul>
+            </div>`;
+        }
+        function renderHasilPorsi() {
+            const result = state.lastResult;
+            const r = RES[result] || RES.PAS;
+            const hungerTxt = { ringan: 'Aktivitas Ringan', sedang: 'Aktivitas Sedang', berat: 'Aktivitas Berat' }[state.hungerLevel];
+            const { portionClass } = calculatePortionWeight();
+            const portionTxt = portionClass === 'Berat / Jumbo' ? 'Porsi Berat' : 'Porsi ' + portionClass;
+            const group = state.groups[state.selectedGroupIndex];
+            document.getElementById('hp-sub').innerText = `${group} mengambil ${portionTxt}.`;
+            const why = {
+                PAS: `${hungerTxt} butuh tenaga yang sesuai dengan ${portionTxt}. Jadi makanannya cukup, tidak kurang dan tidak lebih.`,
+                KURANG: `${hungerTxt} butuh lebih banyak tenaga daripada ${portionTxt}. Jadi makanannya belum cukup dan tubuh bisa lemas seperti Doni.`,
+                BERLEBIHAN: `${hungerTxt} butuh lebih sedikit tenaga daripada ${portionTxt}. Jadi makanannya terlalu banyak dan bisa bersisa.`
+            }[result] || '';
+            const foods = state.plateItems.map(i => `<span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700">${i.emoji} ${i.name}</span>`).join('');
+            document.getElementById('hp-body').innerHTML = `
+                <div class="rounded-3xl p-5 border-4 ${r.box}">
+                    <div class="flex items-center gap-3"><span class="text-5xl">${r.emoji}</span><div><div class="font-heading text-xl md:text-2xl font-bold ${r.txt}">Kenapa porsinya ${r.label}?</div><p class="text-base font-bold ${r.txt} leading-snug mt-1">${why}</p></div></div>
+                    <div class="mt-3 flex flex-wrap gap-2">${foods}</div>
+                </div>
+                ${renderIdealCard()}
+                ${renderKomposisiCard()}
+                <div class="rounded-3xl p-5 border-4 bg-sky-50 border-sky-300">
+                    <div class="flex items-start gap-3"><span class="text-5xl">⚡</span><div><div class="font-heading text-xl md:text-2xl font-bold text-sky-900">Dari mana kita tahu makanan itu sumber energi?</div>
+                    <ul class="mt-2 space-y-1.5 text-base font-bold text-sky-900 leading-snug">
+                        <li>😄 Setelah makan, badan jadi bertenaga untuk berlari dan belajar.</li>
+                        <li>😵 Kalau lapar atau makan terlalu sedikit, badan jadi lemas seperti Doni.</li>
+                        <li>👉 Itu tandanya makanan memberi energi untuk tubuh kita.</li></ul></div></div>
+                </div>
+                <div class="rounded-3xl p-5 border-4 bg-amber-50 border-amber-300">
+                    <div class="flex items-start gap-3"><span class="text-5xl">🌱</span><div><div class="font-heading text-xl md:text-2xl font-bold text-amber-900">Mengapa tidak boleh membuang makanan?</div>
+                    <ul class="mt-2 space-y-1.5 text-base font-bold text-amber-900 leading-snug">
+                        <li>🗑️ Makanan yang dibuang tidak bisa menjadi energi. Itu mubazir.</li>
+                        <li>✅ Jadi ambil makanan secukupnya dan habiskan ya!</li></ul></div></div>
+                </div>`;
+        }
+
+        function speakStep() {
+            try {
+                if (state.isAudioMuted || !window.speechSynthesis || !window._stepSpeech) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(window._stepSpeech);
+                u.lang = 'id-ID';
+                u.rate = 0.9;
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
+        }
+        function closeStepPopup() {
+            try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+            document.getElementById('modal-step').classList.add('hidden');
+            // Timer 2 menit baru mulai setelah murid membaca pop-up Langkah 3
+            if (state.currentStepPopup === 3 && state.kioskStep === 'menu') {
+                resetKioskTimer();
+                startKioskTimer();
+            }
+            const wasStep = state.currentStepPopup;
+            state.currentStepPopup = null;
+            if (wasStep === 4) openVotePopup();
+            if (wasStep === 'result') showHasilPage(2);
+            if (wasStep === 'energy') showHasilPage(3);
+        }
+        // ===== Alur 4 langkah: Aktivitas -> Piring -> Menu -> Matriks =====
+        state.kioskStep = 'plate';
+        function startMenuStep() {
+            state.kioskStep = 'menu';
+            applyKioskStep();
+            renderStepper('kiosk');
+            resetKioskTimer();
+            playSound('finish');
+            showStepPopup(3);
+        }
+        function setKioskStep(step) {
+            state.kioskStep = step;
+            if (step === 'plate') pauseKioskTimer();
+            applyKioskStep();
+            renderStepper('kiosk');
+        }
+        function applyKioskStep() {
+            const menu = state.kioskStep === 'menu';
+            const show = (id, on) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', !on); };
+            show('kiosk-plate-card', !menu);
+            show('kiosk-plate-next', !menu);
+            show('kiosk-timer-card', menu);
+            show('kiosk-menu-banner', menu);
+            show('kiosk-workspace', menu);
+            show('btn-change-plate', menu);
+            if (!menu) document.getElementById('kiosk-timeup-banner').classList.add('hidden');
+        }
+        function renderStepper(tab) {
+            const el = document.getElementById('stepper');
+            if (!el) return;
+            if (tab === 'scoreboard') { el.classList.add('hidden'); return; }
+            el.classList.remove('hidden');
+            let cur = 1;
+            if (tab === 'kiosk') cur = state.kioskStep === 'menu' ? 3 : 2;
+            if (tab === 'evaluator' || tab === 'hasil') cur = 4;
+            const steps = [['🎯', 'Pilih Aktivitas'], ['🍽️', 'Pilih Piring'], ['🍱', 'Pilih Menu'], ['⚖️', 'Cek Matriks']];
+            el.innerHTML = '<div class="flex items-start justify-between gap-1">' + steps.map((st, i) => {
+                const n = i + 1;
+                const done = n < cur, now = n === cur;
+                const circle = done ? 'bg-emerald-500 text-white' : now ? 'bg-amber-400 text-slate-900 ring-4 ring-amber-200 scale-110' : 'bg-slate-200 text-slate-500';
+                const label = now ? 'text-brand-dark' : done ? 'text-emerald-700' : 'text-slate-400';
+                const line = n < 4 ? `<div class="flex-1 h-1.5 rounded-full mt-5 md:mt-6 ${done ? 'bg-emerald-400' : 'bg-slate-200'}"></div>` : '';
+                return `<div class="flex flex-col items-center text-center w-16 md:w-24 shrink-0">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-bold transition-all ${circle}">${done ? '✓' : st[0]}</div>
+                    <div class="font-heading font-bold text-[11px] md:text-sm mt-1 leading-tight ${label}">Langkah ${n}<br>${st[1]}</div>
+                </div>${line}`;
+            }).join('') + '</div>';
+        }
+        function updateActivityInfo() {
+            const info = {
+                ringan: ['Aktivitas Ringan', 'Porsi Ringan', 'Tubuhmu tidak banyak bergerak, jadi energi yang dipakai sedikit.'],
+                sedang: ['Aktivitas Sedang', 'Porsi Sedang', 'Tubuhmu bergerak seperti biasa, jadi butuh energi yang cukup.'],
+                berat:  ['Aktivitas Berat', 'Porsi Berat / Jumbo', 'Tubuhmu banyak bergerak, jadi butuh banyak bahan bakar agar tidak lemas seperti Doni.']
+            }[state.hungerLevel];
+            const chip = document.getElementById('kiosk-activity-chip');
+            if (chip) chip.innerText = `${info[0]} (target ${info[1]})`;
+            const note = document.getElementById('activity-pick-note');
+            if (note) note.innerText = `✅ Kelompokmu memilih ${info[0]}. Targetmu: ${info[1]}. ${info[2]}`;
+        }
+        const _renderKioskGuideBase = renderKioskGuide;
+        renderKioskGuide = function () { _renderKioskGuideBase(); updateActivityInfo(); };
+        updateActivityInfo();
+
+        // ===== Perubahan Bentuk Energi (selaras CP & LKM Langkah 3) =====
+        const miniCekState = { a: null, b: null };
+        function renderEnergyPanel() {
+            const el = document.getElementById('energy-panel-body');
+            if (!el) return;
+            if (!state.isMatrixRevealed) {
+                el.innerHTML = '<p class="text-sm text-sky-800 font-bold">🔒 Buka matriks dulu untuk melihat ke mana energi makanan kelompok ini pergi.</p>';
+                return;
+            }
+            const r = getActualMatrixResult();
+            const cfg = {
+                PAS:        { ok: true,  g: 'Anak berlari kencang!', h: 'Badan terasa hangat.', note: 'Porsi pas: energi cukup untuk gerak dan panas. Tidak ada makanan terbuang.' },
+                KURANG:     { ok: false, g: 'Anak melambat dan lemas.', h: 'Energi panas yang dihasilkan lebih sedikit.', note: 'Bahan bakarnya kurang, sehingga energi gerak dan panas belum cukup. Ayo tambah makanan!' },
+                BERLEBIHAN: { ok: false, g: 'Energi sudah cukup, sisanya tidak terpakai.', h: 'Makanan sisa dibuang.', note: 'Makanan yang dibuang tidak bisa menjadi energi gerak dan panas. Itu mubazir.' },
+                KOSONG:     null
+            }[r];
+            if (!cfg) { el.innerHTML = '<p class="text-sm text-sky-800 font-bold">Piring masih kosong, belum ada energi yang bisa diubah.</p>'; return; }
+            const tone = cfg.ok ? 'emerald' : 'amber';
+            el.innerHTML = `
+                <div class="flex flex-col md:flex-row items-stretch gap-3 text-center">
+                    <div class="flex-1 p-3 bg-white rounded-2xl border border-sky-200"><div class="text-3xl">🍽️</div><div class="font-heading font-bold text-sm">Makanan di Piring</div></div>
+                    <div class="self-center text-2xl text-sky-500">➜</div>
+                    <div class="flex-1 p-3 bg-white rounded-2xl border border-sky-200"><div class="text-3xl">🧒</div><div class="font-heading font-bold text-sm">Tubuh Mengubah Makanan</div></div>
+                    <div class="self-center text-2xl text-sky-500">➜</div>
+                    <div class="flex-1 space-y-2">
+                        <div class="p-3 bg-${tone}-50 rounded-2xl border border-${tone}-300"><div class="text-2xl">🏃</div><div class="font-heading font-bold text-sm">Energi Gerak</div><div class="text-xs">${cfg.g}</div></div>
+                        <div class="p-3 bg-${tone}-50 rounded-2xl border border-${tone}-300"><div class="text-2xl">🔥</div><div class="font-heading font-bold text-sm">Energi Panas</div><div class="text-xs">${cfg.h}</div></div>
+                    </div>
+                </div>
+                <p class="mt-3 text-sm font-bold text-sky-900">${cfg.note}</p>
+                <div class="mt-4 p-4 bg-white rounded-2xl border border-sky-200">
+                    <div class="font-heading font-bold text-sm text-sky-900 mb-2">Mini-cek: Pasangkan!</div>
+                    ${[['a','🦵 Kaki berlari dan tangan mengayun','gerak'],['b','🥵 Badan hangat dan berkeringat','panas']].map(q => `
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="text-sm font-bold flex-1 min-w-[180px]">${q[1]}</span>
+                            <button onclick="miniCek('${q[0]}','gerak','${q[2]}')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Energi Gerak</button>
+                            <button onclick="miniCek('${q[0]}','panas','${q[2]}')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Energi Panas</button>
+                            <span id="minicek-${q[0]}" class="text-xs font-bold w-24"></span>
+                        </div>`).join('')}
+                    <div class="mt-3 pt-3 border-t border-sky-100">
+                        <div class="font-heading font-bold text-sm text-sky-900 mb-2">Mini-cek: Sumber Energi</div>
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="text-sm font-bold flex-1 min-w-[180px]">🏃 Dari mana tubuh mendapat tenaga untuk berlari?</span>
+                            <button onclick="miniCek('c','makanan','makanan')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Makanan</button>
+                            <button onclick="miniCek('c','mainan','makanan')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Mainan</button>
+                            <button onclick="miniCek('c','tv','makanan')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Menonton TV</button>
+                            <span id="minicek-c" class="text-xs font-bold w-24"></span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="text-sm font-bold flex-1 min-w-[180px]">😵 Doni makan sedikit lalu berlari. Apa yang terjadi?</span>
+                            <button onclick="miniCek('d','lemas','lemas')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Lemas, energinya kurang</button>
+                            <button onclick="miniCek('d','kuat','lemas')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-sky-100 border">Tetap kuat berlari</button>
+                            <span id="minicek-d" class="text-xs font-bold w-24"></span>
+                        </div>
+                    </div>
+                </div>`;
+            miniCekState.a = null; miniCekState.b = null;
+        }
+        function miniCek(key, pick, answer) {
+            const out = document.getElementById('minicek-' + key);
+            const ok = pick === answer;
+            out.innerText = ok ? '✅ Benar!' : '❌ Coba lagi';
+            out.className = 'text-xs font-bold w-24 ' + (ok ? 'text-emerald-600' : 'text-rose-600');
+            if (ok) { try { playSound('add'); } catch (e) {} }
+        }
+        const _runEvaluatorBase = runEvaluator;
+        runEvaluator = function () { _runEvaluatorBase(); renderKomposisi(); renderEnergyPanel(); };
+        renderKioskGuide();
+
+        function runEvaluator() {
+            renderSpectatorVotingCards();
+
+            const hungerMap = {
+                'ringan': '1. Aktivitas Ringan (Bermain Tenang)',
+                'sedang': '2. Aktivitas Sedang (Belajar di Sekolah)',
+                'berat': '3. Aktivitas Berat (Lomba Lari / Olahraga)'
+            };
+
+            const { portionClass } = calculatePortionWeight();
+            
+            document.getElementById('summary-hunger').innerText = hungerMap[state.hungerLevel];
+            document.getElementById('summary-items-count').innerText = `${state.plateItems.length} Item`;
+            document.getElementById('summary-calc-portion').innerText = `Porsi ${portionClass}`;
+
+            const foodListContainer = document.getElementById('summary-food-list');
+            if (state.plateItems.length === 0) {
+                foodListContainer.innerHTML = `<span class="text-xs text-rose-500 italic font-bold">Belum ada makanan yang dimasukkan ke piring!</span>`;
+            } else {
+                foodListContainer.innerHTML = state.plateItems.map(i => {
+                    const tagIcons = { karbo: '🍚', protein: '🍗', sayur: '🥦', buah: '🍎', minuman: '🥤' };
+                    return `
+                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-1">
+                            <span>${i.emoji}</span> ${i.name} <span class="text-[10px] text-slate-400">(${tagIcons[i.tag]})</span>
+                        </span>
+                    `;
+                }).join('');
+            }
+
+            const statusCard = document.getElementById('eval-status-card');
+            const icon = document.getElementById('eval-icon');
+            const badge = document.getElementById('eval-badge');
+            const title = document.getElementById('eval-title');
+            const desc = document.getElementById('eval-desc');
+            const resultTag = document.getElementById('summary-result-tag');
+
+            if (!state.isMatrixRevealed) {
+                statusCard.className = "mt-6 p-6 rounded-3xl border-4 flex flex-col md:flex-row items-center gap-6 bg-slate-50 border-slate-300";
+                icon.innerText = "🔒";
+                badge.className = "px-3 py-1 bg-slate-200 text-slate-700 rounded-full font-heading text-xs font-bold uppercase tracking-wider";
+                badge.innerText = "MATRIKS TERKUNCI";
+                title.innerText = "Menunggu Voting Kelompok Penonton!";
+                title.className = "font-heading text-2xl font-bold text-slate-800";
+                desc.innerText = "Setiap kelompok penonton memasukkan tebakan di atas. Klik tombol 'Buka Matriks & Kalkulasi Skor Voting' untuk membuka hasil dan membagikan koin!";
+                desc.className = "text-slate-600 text-sm md:text-base leading-relaxed";
+                resultTag.innerText = "🔒 RAHASIA";
+                resultTag.className = "font-heading text-base font-bold text-slate-500 mt-1";
+
+                generateScript(false, 'RAHASIA', portionClass);
+                return;
+            }
+
+            const actualResult = getActualMatrixResult();
+
+            if (actualResult === 'KOSONG') {
+                statusCard.className = "mt-6 p-6 rounded-3xl border-4 flex flex-col md:flex-row items-center gap-6 bg-slate-50 border-slate-300";
+                icon.innerText = "❓";
+                badge.className = "px-3 py-1 bg-slate-200 text-slate-700 rounded-full font-heading text-xs font-bold uppercase tracking-wider";
+                badge.innerText = "PIRING KOSONG";
+                title.innerText = "Belum Ada Makanan!";
+                title.className = "font-heading text-2xl font-bold text-slate-800";
+                desc.innerText = "Silakan kembali ke Kios Makanan dan pilih menu sesuai kebutuhan energi kelompokmu!";
+                desc.className = "text-slate-600 text-sm md:text-base leading-relaxed";
+                resultTag.innerText = "BELUM DIPILIH ⚪";
+                resultTag.className = "font-heading text-base font-bold text-slate-500 mt-1";
+            } else if (actualResult === 'PAS') {
+                statusCard.className = "mt-6 p-6 rounded-3xl border-4 flex flex-col md:flex-row items-center gap-6 bg-emerald-50 border-emerald-400";
+                icon.innerText = "🌟";
+                badge.className = "px-3 py-1 bg-emerald-200 text-emerald-800 rounded-full font-heading text-xs font-bold uppercase tracking-wider";
+                badge.innerText = "PAS! (Sesuai Kebutuhan)";
+                title.innerText = "Hebat! Porsi Pas & Hemat Energi!";
+                title.className = "font-heading text-2xl font-bold text-emerald-900";
+                desc.innerText = "Jumlah porsi makanan yang kamu ambil pas dengan kebutuhan energimu. Tidak ada makanan yang terbuang dan makanan akan diubah tubuhmu menjadi energi gerak dan energi panas untuk belajar dan bermain!";
+                desc.className = "text-emerald-800 text-sm md:text-base leading-relaxed";
+                resultTag.innerText = "SESUAI 👍";
+                resultTag.className = "font-heading text-base font-bold text-emerald-600 mt-1";
+            } else if (actualResult === 'BERLEBIHAN') {
+                statusCard.className = "mt-6 p-6 rounded-3xl border-4 flex flex-col md:flex-row items-center gap-6 bg-rose-50 border-rose-400";
+                icon.innerText = "⚠️";
+                badge.className = "px-3 py-1 bg-rose-200 text-rose-800 rounded-full font-heading text-xs font-bold uppercase tracking-wider";
+                badge.innerText = "AWAS! PORSI BERLEBIHAN";
+                title.innerText = "Jangan Buang Makanan, Sumber Energi Utama Kita!";
+                title.className = "font-heading text-2xl font-bold text-rose-900";
+                desc.innerText = "Ingat ya, makanan adalah sumber energi utama tubuh kita! Kalau mengambil porsi terlalu banyak sampai tersisa, energi berharga dari makanan yang terbuang tidak bisa menjadi energi gerak dan energi panas. Yuk, ambil porsi secukupnya agar tidak mubazir!";
+                desc.className = "text-rose-800 text-sm md:text-base leading-relaxed";
+                resultTag.innerText = "KELEBIHAN PORSI 👎";
+                resultTag.className = "font-heading text-base font-bold text-rose-600 mt-1";
+            } else {
+                statusCard.className = "mt-6 p-6 rounded-3xl border-4 flex flex-col md:flex-row items-center gap-6 bg-amber-50 border-amber-400";
+                icon.innerText = "🍲";
+                badge.className = "px-3 py-1 bg-amber-200 text-amber-800 rounded-full font-heading text-xs font-bold uppercase tracking-wider";
+                badge.innerText = "TIDAK PAS: KURANG PORSI";
+                title.innerText = "Kurang Asupan Energi Utama!";
+                title.className = "font-heading text-2xl font-bold text-amber-900";
+                desc.innerText = "Makanan adalah sumber energi utama kita. Karena porsinya terlalu sedikit, tubuhmu kekurangan bahan bakar untuk diubah menjadi energi gerak dan energi panas, sehingga mudah lemas saat belajar!";
+                desc.className = "text-amber-800 text-sm md:text-base leading-relaxed";
+                resultTag.innerText = "KURANG PORSI ⚠️";
+                resultTag.className = "font-heading text-base font-bold text-amber-600 mt-1";
+            }
+
+            generateScript(actualResult === 'PAS', actualResult, portionClass);
+        }
+
+        function showGroupStartModal(index) {
+            state.selectedGroupIndex = index;
+            const groupName = state.groups[index];
+
+            document.getElementById('modal-group-title').innerText = groupName;
+            document.getElementById('modal-group-subtitle').innerHTML = `Saatnya <strong>${groupName}</strong> memilih menu di Kios Makanan dan membuktikan porsi pas!`;
+            document.getElementById('modal-group-start').classList.remove('hidden');
+        }
+
+        function confirmStartGroup() {
+            document.getElementById('modal-group-start').classList.add('hidden');
+            clearPlate();
+            resetKioskTimer();
+            state.spectatorVotes = {};
+            state.isMatrixRevealed = false;
+            document.getElementById('voting-results-summary').classList.add('hidden');
+
+            state.kioskStep = 'plate';
+            switchTab('aktivitas');
+            playSound('finish');
+            showStepPopup(1);
+        }
+
+        function finishAndNextGroup() {
+            let nextIndex = state.selectedGroupIndex + 1;
+            if (nextIndex >= state.groups.length) {
+                nextIndex = 0;
+            }
+            showGroupStartModal(nextIndex);
+        }
+
+        function renderScoreboard() {
+            const container = document.getElementById('group-scoreboard-list');
+            let html = '';
+
+            for (let i = 0; i < state.groups.length; i++) {
+                const isActive = (i === state.selectedGroupIndex);
+                html += `
+                    <div onclick="selectGroup(${i})" class="cursor-pointer p-4 rounded-2xl border-4 transition-all ${isActive ? 'bg-indigo-50 border-indigo-500 shadow-md ring-2 ring-indigo-400 scale-[1.02]' : 'bg-slate-50 border-slate-200 hover:border-slate-300'} flex flex-col justify-between">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-heading font-bold text-sm text-slate-700 truncate">${state.groups[i]}</span>
+                            ${isActive ? '<span class="text-[9px] bg-indigo-500 text-white font-bold px-2 py-0.5 rounded-full">PRESENTASI</span>' : ''}
+                        </div>
+                        <div class="text-center my-2">
+                            <span class="font-heading text-3xl font-bold text-amber-500 flex items-center justify-center gap-1">
+                                🪙 ${state.scores[i]}
+                            </span>
+                            <span class="text-[11px] text-slate-500 font-bold block mt-1">Koin Energi</span>
+                        </div>
+                        <div class="flex gap-1.5 mt-2 pt-2 border-t border-slate-200/80">
+                            <button onclick="event.stopPropagation(); adjustScore(${i}, -1)" class="flex-1 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-lg text-xs transition-all">
+                                -1
+                            </button>
+                            <button onclick="event.stopPropagation(); adjustScore(${i}, 1)" class="flex-1 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold rounded-lg text-xs transition-all">
+                                +1
+                            </button>
+                        </div>
+                        ${isActive ? `
+                            <button onclick="event.stopPropagation(); finishAndNextGroup()" class="mt-2 w-full py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-heading font-bold text-[11px] rounded-xl shadow transition-all flex items-center justify-center gap-1">
+                                🏁 Selesai & Lanjut Kelompok Berikutnya! ➡️
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        window.onload = function() {
+            renderMenuList();
+            renderScoreboard();
+            updatePlateVisual();
+            selectHunger('sedang');
+            selectPlateStyle('medium');
+            updateKioskTimerDisplay();
+            updateActiveGroupUI();
+
+            showGroupStartModal(0);
+            switchTab('aktivitas');
+        };
+
+        function renderMenuList() {
+            const snackContainer = document.getElementById('snack-menu-list');
+            const mainContainer = document.getElementById('main-menu-list');
+
+            const filterSnacks = snackMenu.filter(item => state.activeFilter === 'all' || item.tag === state.activeFilter);
+            const filterMains = mainMenu.filter(item => state.activeFilter === 'all' || item.tag === state.activeFilter);
+
+            document.getElementById('snack-count-badge').innerText = `${filterSnacks.length} Pilihan`;
+            document.getElementById('main-count-badge').innerText = `${filterMains.length} Pilihan`;
+
+            snackContainer.innerHTML = filterSnacks.map(item => `
+                <button onclick="addToPlate('${item.id}', 'snack')" class="p-2 bg-amber-50/60 hover:bg-amber-100 border border-amber-200 hover:border-amber-400 rounded-xl flex items-center gap-2 transition-all text-left active:scale-95 group">
+                    <span class="text-xl md:text-2xl">${item.emoji}</span>
+                    <div class="overflow-hidden">
+                        <div class="font-heading font-bold text-xs text-amber-950 truncate">${item.name}</div>
+                        <div class="text-[10px] text-amber-700 capitalize">${tagLabel[item.tag]}${item.khas ? ' <span class="inline-block bg-orange-500 text-white font-bold px-1.5 rounded-full normal-case">🌴 Khas</span>' : ''}</div>
+                    </div>
+                </button>
+            `).join('');
+
+            mainContainer.innerHTML = filterMains.map(item => `
+                <button onclick="addToPlate('${item.id}', 'main')" class="p-2 bg-teal-50/60 hover:bg-teal-100 border border-teal-200 hover:border-teal-400 rounded-xl flex items-center gap-2 transition-all text-left active:scale-95 group">
+                    <span class="text-xl md:text-2xl">${item.emoji}</span>
+                    <div class="overflow-hidden">
+                        <div class="font-heading font-bold text-xs text-teal-950 truncate">${item.name}</div>
+                        <div class="text-[10px] text-teal-700 capitalize">${tagLabel[item.tag]}${item.khas ? ' <span class="inline-block bg-orange-500 text-white font-bold px-1.5 rounded-full normal-case">🌴 Khas</span>' : ''}</div>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        function generateScript(isMatched, actualResult, portionClass) {
+            const scriptEl = document.getElementById('spokesperson-script');
+            const currentGroup = state.groups[state.selectedGroupIndex];
+
+            const hungerText = {
+                'ringan': 'aktivitas ringan (bermain tenang)',
+                'sedang': 'aktivitas sedang (belajar di sekolah)',
+                'berat': 'aktivitas berat (lomba lari / olahraga)'
+            }[state.hungerLevel];
+
+            let text = `"Halo teman-teman! Kami dari ${currentGroup}. Tingkat aktivitas kelompok kami adalah ${hungerText}. `;
+
+            if (!state.isMatrixRevealed) {
+                text += `Kami telah menyusun porsi ${portionClass} di piring kami. Menurut tebakan teman-teman, apakah porsi kami sudah PAS, BERLEBIHAN, atau KURANG?"`;
+            } else if (actualResult === 'PAS') {
+                text += `Berdasarkan Matriks Rumus Pas, porsi pilihan kami SESUAI dan PAS! Kami mengambil energi yang cukup tanpa menyisakan makanan sedikit pun! Makanan itu akan diubah tubuh menjadi energi gerak untuk bergerak dan energi panas untuk menghangatkan tubuh."`;
+            } else if (actualResult === 'BERLEBIHAN') {
+                text += `Berdasarkan Matriks Rumus Pas, porsi pilihan kami BERLEBIHAN. Kami sadar membuang makanan berarti membuang energi berharga, jadi kami berjanji akan mengambil porsi lebih pas! Energi dari makanan yang terbuang tidak bisa menjadi energi gerak dan energi panas."`;
+            } else {
+                text += `Berdasarkan Matriks Rumus Pas, porsi pilihan kami KURANG. Tubuh kita butuh energi utama yang cukup agar tidak lemas saat belajar! Makanan diubah tubuh menjadi energi gerak dan energi panas, jadi kalau porsinya kurang, tubuh kekurangan tenaga."`;
+            }
+
+            scriptEl.innerText = text;
+        }
+
+        function copyScript() {
+            const scriptText = document.getElementById('spokesperson-script').innerText;
+            const textToCopy = document.createElement('textarea');
+            textToCopy.value = scriptText;
+            document.body.appendChild(textToCopy);
+            textToCopy.select();
+            document.execCommand('copy');
+            document.body.removeChild(textToCopy);
+
+            const toast = document.getElementById('copy-toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2000);
+        }
+
+        function adjustScore(groupIndex, delta) {
+            state.scores[groupIndex] = Math.max(0, state.scores[groupIndex] + delta);
+            renderScoreboard();
+        }
+
+        function triggerPrintReport() {
+            const tbody = document.getElementById('printable-report-body');
+            tbody.innerHTML = state.groups.map((g, idx) => `
+                <tr>
+                    <td class="border border-slate-400 p-2 text-center font-bold">${idx + 1}</td>
+                    <td class="border border-slate-400 p-2">${g}</td>
+                    <td class="border border-slate-400 p-2 text-center font-bold">🪙 ${state.scores[idx]}</td>
+                    <td class="border border-slate-400 p-2 text-center">${idx === state.selectedGroupIndex ? (state.isMatrixRevealed ? getActualMatrixResult() : 'Belum Ditinjau') : 'Selesai / Menunggu'}</td>
+                </tr>
+            `).join('');
+
+            window.print();
+        }
+    </script>
+</body>
+</html>
